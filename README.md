@@ -1,8 +1,6 @@
 # agentCLS
 
-我的想法是
-使用模型的back propagation对于模型的生成或者分类任务进行优化，使得prompt可以更加快速地找到更加合适
+This is a paper respository for classification of text using transformer related technology to investigate what are the main difference and if possible our new methods combining soft prompt tuning and discrete prompt enginnering.
 
-工作内容：
+We mainly consider ***Soft Prompt Tuning (SPT)***, ***Supervised Fine Tuning (SFT)*** and ***Discrete Prompt Enginnering (DPE)*** as the new leading and commonly used technology.
 
-1. 测试一个
