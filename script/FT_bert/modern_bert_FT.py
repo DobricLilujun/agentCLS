@@ -87,6 +87,7 @@ save_strategy = "epoch"
 save_total_limit = 2
 logging_strategy = "steps"
 max_grad_norm = 0.3
+max_length = 4096
 input_dataset_name = train_dataset_path.split("/")[-1].split(".")[0]
 model_name = model_path.split("/")[-1]
 
@@ -102,12 +103,15 @@ else:
 
 dataset = pd.read_json(train_dataset_path, lines=True)
 dataset.rename(columns={"cls_label": "labels"}, inplace=True)
+
+
 # if "EURLEX57K_split" in train_dataset_path:
 #     if "cls_label" in dataset.columns:
 #         dataset.rename(columns={"cls_label": "labels"}, inplace=True)
 # else:
 #     if "cls_label" in dataset.columns:
 #         dataset.rename(columns={"cls_label": "labels"}, inplace=True)
+
 
 sample_counts = dataset.groupby('labels').size() * train_ratio
 filtered_data = dataset.groupby('labels', group_keys=False).apply(lambda x: x.iloc[:int(sample_counts[x.name])])
@@ -137,7 +141,7 @@ val_dataset = val_dataset.cast_column("labels", class_label)
 
 def tokenize(examples):
     # Tokenize the content and add the corresponding labels to the output
-    tokenized_inputs = tokenizer(examples["content"], padding=True, max_length=4096, truncation=True, return_tensors="pt")
+    tokenized_inputs = tokenizer(examples["content"], padding=True, max_length=max_length, truncation=True, return_tensors="pt")
     # tokenized_inputs["label"] = examples["labels"] 
     return tokenized_inputs
 
@@ -162,7 +166,6 @@ def compute_metrics(eval_pred):
         )
     
     return {"f1": float(score) if score == 1 else score}
-
 
 
 

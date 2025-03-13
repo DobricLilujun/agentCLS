@@ -7,8 +7,15 @@ Categories:
 3. **Regulation** - Appropriate for texts that stipulate rules or guidelines.
 
 Text for Classification:
+
+
+Input text: 
+
+<<<START_INPUT>>>
+
 {input}
 
+<<<END_INPUT>>>
 """
 
 prompt_eurlex57k_COT_classification = """To accurately classify the input text, consider the following category descriptions: 
@@ -25,26 +32,15 @@ To accurately classify text into the categories of 'Decision', 'Directive', or '
 
 Please classify the following input text into the appropriate category: 
 
-{input}
-"""
+Input text: 
 
-
-prompt_eurlex57k_COT_classification = """To accurately classify the input text, consider the following category descriptions: 
-- **Decision**: Texts that involve making or describing decisions. 
-- **Directive**: Texts that instruct or command specific actions. 
-- **Regulation**: Texts that outline rules, guidelines, or laws. 
-
-To accurately classify text into the categories of 'Decision', 'Directive', or 'Regulation', follow this structured reasoning process: 
-1. Begin by comprehensively reading the text to grasp its content and intent. 
-2. Evaluate whether the text primarily involves making a choice or reaching a conclusion, which would classify it as a 'Decision'. Identify critical phrases and structures that suggest a decision-making process. Place this assessment under the reasoning field. 
-3. If the text primarily directs or instructs actions, categorize it as a 'Directive'. Look for directive language or commands that are indicative of this classification. This evaluation should also be placed under the reasoning field. 
-4. Assess if the text establishes rules or guidelines, categorizing it as a 'Regulation'. Search for terms and formats typical of regulatory texts and include this in the reasoning field. 
-5. After completing these reasoning steps, assign the text to the most fitting category based on the evidence gathered. This conclusion should be detailed in the conclusion field. {input}
-
-Please classify the following input text into the appropriate category: 
+<<<START_INPUT>>>
 
 {input}
+
+<<<END_INPUT>>>
 """
+
 
 
 prompt_eurlex57k_few_shots_classification = """## Task Description
@@ -86,7 +82,13 @@ When analyzing an input text, adhere to the following steps:
 
 Please classify the following input text into the appropriate category:
 
+Input text: 
+
+<<<START_INPUT>>>
+
 {input}
+
+<<<END_INPUT>>>
 """
 
 prompt_LDD_description_classification = """To accurately classify the input text, first understand its content and context, then match it to the most appropriate category based on the descriptions provided below:
@@ -105,7 +107,13 @@ prompt_LDD_description_classification = """To accurately classify the input text
 
 Please classify the following input text into the appropriate category based on the descriptions above:
 
+Input text: 
+
+<<<START_INPUT>>>
+
 {input}
+
+<<<END_INPUT>>>
 """
 
 prompt_LDD_COT_classification = """To ensure accurate classification of the input text into the appropriate category, follow these structured reasoning steps: 
@@ -129,14 +137,77 @@ Input text: {input}
 """
 
 
-prompt_LDD_few_shots_classification = """
+prompt_LDD_few_shots_classification = """This prompt is designed to guide the classification of text into specific categories based on detailed descriptions. Each category is associated with a particular field or topic, and the provided examples will help in identifying the correct category for a given input text.
+
+#### Category Descriptions:
+1. **cs.AI (Artificial Intelligence)**: Texts discussing concepts, theories, or applications in the realm of artificial intelligence, including machine learning, game theory, and AI-driven optimizations.
+2. **cs.CE (Computational Engineering)**: Involves content related to engineering approaches that utilize computational methods and simulations, including optimizations and system designs.
+3. **cs.CV (Computer Vision)**: Pertains to texts dealing with image processing, visual data interpretation, and related algorithmic developments.
+4. **cs.DS (Data Structures)**: Includes discussions on algorithms, data structures, and their applications in various computational processes.
+5. **cs.IT (Information Theory)**: Texts that explore concepts like data encryption, compression, and transmission, focusing on the theoretical underpinnings of information processing.
+6. **cs.NE (Neural and Evolutionary)**: Covers advancements and studies in neural networks, evolutionary algorithms, and their cognitive and computational implications.
+7. **cs.PL (Programming Languages)**: Texts discussing syntax, semantics, and the development of programming languages, including theoretical and practical aspects.
+8. **cs.SY (Systems and Control)**: Involves control theory, systems engineering, and their applications in designing and managing complex systems.
+9. **math.AC (Commutative Algebra)**: Texts focusing on algebraic structures and their properties, with a special emphasis on theories related to commutativity.
+10. **math.GR (Group Theory)**: Discussions on mathematical groups, their properties, and applications in various mathematical and computational fields.
+11. **math.ST (Statistics Theory)**: Involves detailed discussions on statistical methodologies, theories, and their applications in data analysis and interpretation.
+
+#### Examples for Classification:
+- **Example for cs.AI**:
+  - *Input*: "This paper introduces a novel algorithm for optimizing neural network architecture using evolutionary strategies."
+  - *Category*: cs.AI
+
+- **Example for cs.CE**:
+  - *Input*: "A study on the computational modeling of fluid dynamics in complex engineering systems."
+  - *Category*: cs.CE
+
+- **Example for cs.CV**:
+  - *Input*: "Enhancements in facial recognition algorithms through deep learning techniques."
+  - *Category*: cs.CV
+
+- **Example for cs.DS**:
+  - *Input*: "Optimizing search algorithms for faster retrieval in database management systems."
+  - *Category*: cs.DS
+
+- **Example for cs.IT**:
+  - *Input*: "Exploring new methods for data compression in high-speed networks."
+  - *Category*: cs.IT
+
+- **Example for cs.NE**:
+  - *Input*: "The impact of genetic algorithms on solving complex optimization problems."
+  - *Category*: cs.NE
+
+- **Example for cs.PL**:
+  - *Input*: "Developing a new functional programming language designed for concurrent computing."
+  - *Category*: cs.PL
+
+- **Example for cs.SY**:
+  - *Input*: "Innovative control strategies for autonomous drone navigation."
+  - *Category*: cs.SY
+
+- **Example for math.AC**:
+  - *Input*: "Research on the application of Noetherian rings in solving algebraic geometry problems."
+  - *Category*: math.AC
+
+- **Example for math.GR**:
+  - *Input*: "Analyzing the symmetrical properties of finite groups and their applications in cryptography."
+  - *Category*: math.GR
+
+- **Example for math.ST**:
+  - *Input*: "Using Bayesian networks to predict stock market trends based on historical data."
+  - *Category*: math.ST
+
+#### Task:
+Classify the following text into the appropriate category based on the descriptions and examples provided above.
+
+Input text: 
+
+<<<START_INPUT>>>
+
+{input}
+
+<<<END_INPUT>>>
 """
-
-
-
-
-
-
 
 
 
