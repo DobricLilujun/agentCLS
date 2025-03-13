@@ -161,7 +161,7 @@ val_dataset = val_dataset.cast_column("labels", class_label)
 
 def tokenize(examples):
     # Tokenize the content and add the corresponding labels to the output
-    tokenized_inputs = tokenizer(examples["content"], padding=True, max_length=max_length, truncation=True, return_tensors="pt")
+    tokenized_inputs = tokenizer(examples["content"], padding="max_length", max_length=max_length, truncation=True, return_tensors="pt")
     # tokenized_inputs["label"] = examples["labels"] 
     return tokenized_inputs
 
@@ -180,7 +180,6 @@ model = AutoModelForSequenceClassification.from_pretrained(model_path, num_label
 # Metric helper method
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
-    predictions = np.argmax(predictions, axis=1)
     acc = accuracy_score(labels, np.argmax(predictions, axis=-1))
     f1 = f1_score(labels, np.argmax(predictions, axis=-1), average="weighted")
     return {"accuracy": acc, "f1": f1}
@@ -257,7 +256,7 @@ def evaluate():
     for input in tqdm(val_dataset, desc="Processing validation data", unit="sample"):
         sample = input['content']
         true_label_idx = int(input['labels'])
-        tokenized_input = tokenizer(sample, padding=True, max_length=max_length, truncation=True, return_tensors="pt").to(device)
+        tokenized_input = tokenizer(sample, padding="max_length", max_length=max_length, truncation=True, return_tensors="pt").to(device)
         model_output = model(**tokenized_input)
         logits = model_output.logits
         probabilities = torch.nn.functional.softmax(logits, dim=-1)
