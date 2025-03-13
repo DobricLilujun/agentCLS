@@ -34,6 +34,8 @@ import torch
 from transformers import EarlyStoppingCallback
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
+
+# 
 # ========================== CMD Argument Parser ==========================
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a model using CPT (Continual Pretraining Training)")
@@ -212,7 +214,9 @@ train_dataset.features.keys()
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
-    return {"f1": f1_score(labels, predictions, average="weighted")}
+    acc = accuracy_score(labels, np.argmax(predictions, axis=-1))
+    f1 = f1_score(labels, np.argmax(predictions, axis=-1), average="weighted")
+    return {"accuracy": acc, "f1": f1}
 
 def train():
     # Define training args
@@ -234,7 +238,7 @@ def train():
         max_grad_norm=max_grad_norm,
         # group_by_length=True,
         # use_mps_device=True,
-        metric_for_best_model="f1",
+        metric_for_best_model="accuracy",
         # push to hub parameters
         # push_to_hub=True,
         # hub_strategy="every_save",

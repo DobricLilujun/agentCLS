@@ -181,11 +181,10 @@ model = AutoModelForSequenceClassification.from_pretrained(model_path, num_label
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
-    score = f1_score(
-            labels, predictions, labels=labels, pos_label=1, average="weighted"
-        )
-    
-    return {"f1": float(score) if score == 1 else score}
+    acc = accuracy_score(labels, np.argmax(predictions, axis=-1))
+    f1 = f1_score(labels, np.argmax(predictions, axis=-1), average="weighted")
+    return {"accuracy": acc, "f1": f1}
+
 
 
 def train():
@@ -208,7 +207,7 @@ def train():
         max_grad_norm=max_grad_norm,
         # group_by_length=True,
         # use_mps_device=True,
-        metric_for_best_model="f1",
+        metric_for_best_model="accuracy",
         # push to hub parameters
         # push_to_hub=True,
         # hub_strategy="every_save",
