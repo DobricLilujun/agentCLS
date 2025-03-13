@@ -104,7 +104,7 @@ tokenizer.pad_token = tokenizer.eos_token
 train_seed = 3407
 train_ratio = 0.01
 logging_steps = 10
-eval_steps = 10
+eval_steps = 100
 eval_strategy = "steps"
 save_strategy = "epoch"
 save_total_limit = 2
@@ -348,3 +348,17 @@ if __name__ == "__main__":
     eval_results = evaluate()
 
     print("Finished training and evaluation.")
+
+
+# python llama3_FT.py \
+# --per_device_train_batch_size 8 \
+# --per_device_eval_batch_size 8 \
+# --num_train_epochs 10 \
+# --learning_rate 1e-6 \
+# --project_root /home/llama/Personal_Directories/srb/agentCLS \
+# --training_dataset_path assets/training_dataset/LDD_split_equal_train_1000_val_300.jsonl \
+# --model_path /home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct \
+# --resume_from_checkpoint "False" \
+# --resume_checkpoint_path "" \
+# --qlora False \
+# --r 16
