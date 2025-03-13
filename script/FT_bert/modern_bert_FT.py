@@ -186,14 +186,13 @@ def compute_metrics(eval_pred):
     return {"accuracy": acc, "f1": f1}
 
 
-
 def train():
     # Define training args
     training_args = TrainingArguments(
         output_dir= output_dir,
         per_device_train_batch_size=per_device_train_batch_size,
         per_device_eval_batch_size=per_device_eval_batch_size,
-        learning_rate=5e-5,
+        learning_rate=learning_rate,
         num_train_epochs=num_train_epochs,
         bf16=True,
         optim="adamw_torch_fused", 
