@@ -1,26 +1,20 @@
 from datasets import load_dataset
 from datasets.arrow_dataset import Dataset
-from datasets.dataset_dict import DatasetDict, IterableDatasetDict
-from datasets.iterable_dataset import IterableDataset
+from datasets.dataset_dict import DatasetDict
 import pandas as pd
-from transformers import AutoTokenizer
-from tqdm import tqdm
-from datasets import ClassLabel
-from datetime import datetime
-import warnings
-from transformers import logging as transformers_logging
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import Trainer, TrainingArguments, BitsAndBytesConfig
+import torch
 import argparse
 import os
-import sys
-from transformers import AutoModelForSequenceClassification
 import numpy as np
 from sklearn.metrics import f1_score
-from huggingface_hub import HfFolder
-from transformers import Trainer, TrainingArguments
-import os
-import torch
-import glob
-# Load checkpoint
+from datetime import datetime
+import sys
+from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model, LoraConfig
+import json
+from sklearn.metrics import roc_auc_score
+
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from datasets import load_dataset
 from datasets.arrow_dataset import Dataset
@@ -38,11 +32,7 @@ import numpy as np
 # Data preparation
 import torch
 from transformers import EarlyStoppingCallback
-
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-warnings.simplefilter("ignore")
-transformers_logging.set_verbosity_error()
 
 # ========================== CMD Argument Parser ==========================
 def parse_args():
@@ -56,9 +46,12 @@ def parse_args():
     parser.add_argument("--model_path", type=str, default="/home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct", help="Path to model")
     parser.add_argument("--resume_from_checkpoint", type=bool, default=False, help="Resume training from checkpoint")
     parser.add_argument("--resume_checkpoint_path", type=str, default=None, help="Path to checkpoint to resume training from")
+    parser.add_argument("--qlora", type=bool, default=False, help="Use QLoRA")
+    parser.add_argument("--r", type=int, default=16, help="Rank for LoRA")
     return parser.parse_args()
 
 args = parse_args()
+
 
 print("Arguments passed:")
 print(f"Train Batch Size: {args.per_device_train_batch_size}")
@@ -70,7 +63,8 @@ print(f"Training Dataset Path: {args.training_dataset_path}")
 print(f"Model path: {args.model_path}")
 print(f"Resume from checkpoint: {args.resume_from_checkpoint}")
 print(f"Resume checkpoint path: {args.resume_checkpoint_path}")
-
+print(f"Qlora: {args.qlora}")
+print(f"Rank: {args.r}")
 
 per_device_train_batch_size = args.per_device_train_batch_size  # Batch size for training per device
 per_device_eval_batch_size = args.per_device_eval_batch_size  # Batch size for evaluation per device
@@ -81,22 +75,32 @@ training_dataset_path = args.training_dataset_path
 model_path = args.model_path
 resume_from_checkpoint = args.resume_from_checkpoint
 resume_checkpoint_path = args.resume_checkpoint_path
+qlora = args.qlora
+r = args.r
 
-# Data preparation
+
+## Data preparation
 # per_device_train_batch_size = 8
 # per_device_eval_batch_size = 8
-# num_train_epochs = 3
+# num_train_epochs = 1
 # learning_rate = 5e-5
 # project_root = "/home/snt/projects_lujun/agentCLS"
 # training_dataset_path = "assets/training_dataset/LDD_split.json"
-# model_path = "answerdotai/ModernBERT-base"
+# model_path = "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct"
 # resume_from_checkpoint = False
 # resume_checkpoint_path = None
+# qlora = True
+# r = 16
 
 train_dataset_path = os.path.abspath(os.path.join(project_root, training_dataset_path))
 sys.path.append(project_root)
 
+
+# Default Parameters
 tokenizer = AutoTokenizer.from_pretrained(model_path)
+tokenizer.pad_token_id = tokenizer.eos_token_id
+tokenizer.pad_token = tokenizer.eos_token
+
 train_seed = 3407
 train_ratio = 0.01
 logging_steps = 10
@@ -109,6 +113,29 @@ max_grad_norm = 0.3
 input_dataset_name = train_dataset_path.split("/")[-1].split(".")[0]
 model_name = model_path.split("/")[-1]
 max_length = 4096
+load_in_4bit = True
+bnb_4bit_quant_type = 'nf4'
+quantization_config = None
+
+
+if qlora:
+# Quantization with Lora
+    quantization_config = BitsAndBytesConfig(
+        load_in_4bit = load_in_4bit, # enable 4-bit quantization
+        bnb_4bit_quant_type = bnb_4bit_quant_type, # information theoretically optimal dtype for normally distributed weights
+        bnb_4bit_use_double_quant = True, # quantize quantized weights //insert xzibit meme
+        bnb_4bit_compute_dtype = torch.bfloat16 # optimized fp format for ML
+    )
+
+    # Lora
+    lora_config = LoraConfig(
+        r = r, # the dimension of the low-rank matrices
+        lora_alpha = 8, # scaling factor for LoRA activations vs pre-trained weight activations
+        target_modules = ['q_proj', 'k_proj', 'v_proj', 'o_proj'],
+        lora_dropout = 0.05, # dropout probability of the LoRA layers
+        bias = 'none', # wether to train bias weights, set to 'none' for attention layers
+        task_type = 'SEQ_CLS',
+    )
 
 
 if resume_from_checkpoint and resume_checkpoint_path is None:
@@ -131,7 +158,7 @@ filtered_train_data = dataset.groupby('labels', group_keys=False).apply(
 )
 
 filtered_validation_data = dataset.groupby('labels', group_keys=False).apply(
-    lambda x: x[x['split'] == 'validation'].iloc[:int(sample_counts.loc[x.name, 'validation'])*10]
+    lambda x: x[x['split'] == 'validation'].iloc[:int(sample_counts.loc[x.name, 'validation'])]
 )
 
 filtered_train = filtered_train_data.reset_index(drop=True)
@@ -141,14 +168,17 @@ filtered_validation = filtered_validation_data.reset_index(drop=True)
 train_dataset = Dataset.from_pandas(filtered_train)
 val_dataset = Dataset.from_pandas(filtered_validation)
 
-# Prepare model labels - useful for inference
+
+# Tokenization
+def tokenize(examples):
+    return tokenizer(examples["content"], padding=True, truncation=True, max_length=max_length)
+
 labels =  set(train_dataset['labels'])
 num_labels = len(labels)
 label2id, id2label = dict(), dict()
 for i, label in enumerate(labels):
     label2id[label] = str(i)
     id2label[str(i)] = label
-
 
 train_dataset = train_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
 val_dataset = val_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
@@ -159,34 +189,30 @@ train_dataset = train_dataset.cast_column("labels", class_label)
 val_dataset = val_dataset.cast_column("labels", class_label)
 
 
-def tokenize(examples):
-    # Tokenize the content and add the corresponding labels to the output
-    tokenized_inputs = tokenizer(examples["content"], padding=True, max_length=max_length, truncation=True, return_tensors="pt")
-    # tokenized_inputs["label"] = examples["labels"] 
-    return tokenized_inputs
-
-
 keep_columns = ["labels", "input_ids", "attention_mask"]
-
-# Remove all other columns from the dataset
 tokenized_train_dataset = train_dataset.map(tokenize, batched=True, remove_columns=[col for col in train_dataset.column_names if col not in keep_columns])
 tokenized_val_dataset = val_dataset.map(tokenize, batched=True, remove_columns=[col for col in val_dataset.column_names if col not in keep_columns])
 train_dataset.features.keys()
-    
 
-## Load model
-model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label,)
 
-# Metric helper method
+# Load model
+model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label, quantization_config=quantization_config,)
+if qlora:
+    model = get_peft_model(prepare_model_for_kbit_training(model), lora_config)
+
+model.config.pad_token_id = tokenizer.pad_token_id
+model.config.use_cache = False
+model.config.pretraining_tp = 1
+model.gradient_checkpointing_enable()
+
+
+train_dataset.features.keys()
+
+
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
-    score = f1_score(
-            labels, predictions, labels=labels, pos_label=1, average="weighted"
-        )
-    
-    return {"f1": float(score) if score == 1 else score}
-
+    return {"f1": f1_score(labels, predictions, average="weighted")}
 
 def train():
     # Define training args
@@ -203,7 +229,7 @@ def train():
         eval_strategy=eval_strategy,
         eval_steps=eval_steps,
         save_strategy=save_strategy,
-        # save_total_limit=save_total_limit,
+        save_total_limit=save_total_limit,
         load_best_model_at_end=False,
         max_grad_norm=max_grad_norm,
         # group_by_length=True,
@@ -215,7 +241,7 @@ def train():
         # hub_token=HfFolder.get_token(),
         report_to="tensorboard",
         disable_tqdm=False,
-        seed = train_seed
+        seed = train_seed,
     )
     
     # Create a Trainer instance
@@ -225,11 +251,12 @@ def train():
         train_dataset=tokenized_train_dataset,
         eval_dataset=tokenized_val_dataset,
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)] 
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
     )
     trainer_stats = trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     print("Finished training SFT.")
     return trainer_stats
+
 
 def evaluate():
     
@@ -242,8 +269,10 @@ def evaluate():
         return f"{output_dir}/checkpoint-{last_checkpoint}"
     
     checkpoints_path  = get_last_checkpoints(output_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(checkpoints_path).to(device)
+    model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label, quantization_config=quantization_config,).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+    tokenizer.pad_token = tokenizer.eos_token
     validation_results = []
 
     # Initialize lists to store true and predicted labels
@@ -307,13 +336,15 @@ def evaluate():
     return 
         
 
+
 trainer_stats = None
-# trainer_stats = train()
 
 def main():
     trainer_stats = train()
-    evaluate()
     return trainer_stats
 
 if __name__ == "__main__":
     trainer_stats = main()
+    eval_results = evaluate()
+
+    print("Finished training and evaluation.")
