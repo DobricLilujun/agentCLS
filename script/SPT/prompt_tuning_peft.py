@@ -1,41 +1,25 @@
-from datasets import load_dataset
-from datasets.arrow_dataset import Dataset
-from datasets.dataset_dict import DatasetDict
-import pandas as pd
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from transformers import Trainer, TrainingArguments, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import get_peft_model, PromptTuningInit, PromptTuningConfig, TaskType, PeftType, PrefixTuningConfig
 import torch
-import argparse
 import os
-import numpy as np
-from sklearn.metrics import f1_score
-from datetime import datetime
-import sys
-from peft import LoraConfig, prepare_model_for_kbit_training, get_peft_model, LoraConfig
-import json
-from sklearn.metrics import roc_auc_score
-
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-from datasets import load_dataset
-from datasets.arrow_dataset import Dataset
-from datasets.dataset_dict import DatasetDict, IterableDatasetDict
-from datasets.iterable_dataset import IterableDataset
-import pandas as pd
-from transformers import AutoTokenizer
 from tqdm import tqdm
+import sys
+from datetime import datetime
+import pandas as pd
+from datasets.arrow_dataset import Dataset
 from datasets import ClassLabel
-import os
-import torch
-import time
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 import numpy as np
-# Data preparation
-import torch
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
+from transformers import Trainer, TrainingArguments
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from transformers import EarlyStoppingCallback
+from peft import PeftModel, PeftConfig
+import time
+import os
+import argparse
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-
-# 
 # ========================== CMD Argument Parser ==========================
 def parse_args():
     parser = argparse.ArgumentParser(description="Train a model using CPT (Continual Pretraining Training)")
@@ -48,63 +32,83 @@ def parse_args():
     parser.add_argument("--model_path", type=str, default="/home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct", help="Path to model")
     parser.add_argument("--resume_from_checkpoint", type=bool, default=False, help="Resume training from checkpoint")
     parser.add_argument("--resume_checkpoint_path", type=str, default=None, help="Path to checkpoint to resume training from")
-    parser.add_argument("--qlora", type=bool, default=False, help="Use QLoRA")
-    parser.add_argument("--r", type=int, default=16, help="Rank for LoRA")
+    parser.add_argument("--is_prefix_tuning", action="store_true", help="Whether to use PrefixTuning")
+    parser.add_argument("--is_prompt_tuning", action="store_true", help="Whether to use PromptTuning")
+    parser.add_argument("--num_virtual_tokens", type=int, default=32, help="Number of virtual tokens")
     return parser.parse_args()
 
 args = parse_args()
-
-
-print("Arguments passed:")
-print(f"Train Batch Size: {args.per_device_train_batch_size}")
-print(f"Eval Batch Size: {args.per_device_eval_batch_size}")
-print(f"Number of Epochs: {args.num_train_epochs}")
-print(f"Learning Rate: {args.learning_rate}")
-print(f"Project Root: {args.project_root}")
-print(f"Training Dataset Path: {args.training_dataset_path}")
-print(f"Model path: {args.model_path}")
-print(f"Resume from checkpoint: {args.resume_from_checkpoint}")
-print(f"Resume checkpoint path: {args.resume_checkpoint_path}")
-print(f"Qlora: {args.qlora}")
-print(f"Rank: {args.r}")
-
-per_device_train_batch_size = args.per_device_train_batch_size  # Batch size for training per device
-per_device_eval_batch_size = args.per_device_eval_batch_size  # Batch size for evaluation per device
-num_train_epochs = args.num_train_epochs  # Number of epochs for training
-learning_rate = args.learning_rate # Learning rate for the optimizer
+per_device_eval_batch_size = args.per_device_eval_batch_size
+per_device_train_batch_size = args.per_device_train_batch_size
+num_train_epochs = args.num_train_epochs
+learning_rate = args.learning_rate
 project_root = args.project_root
 training_dataset_path = args.training_dataset_path
 model_path = args.model_path
 resume_from_checkpoint = args.resume_from_checkpoint
 resume_checkpoint_path = args.resume_checkpoint_path
-qlora = args.qlora
-r = args.r
+is_prefix_tuning = args.is_prefix_tuning
+is_prompt_tuning = args.is_prompt_tuning
+num_virtual_tokens = args.num_virtual_tokens
 
 
-## Data preparation
-# per_device_train_batch_size = 8
-# per_device_eval_batch_size = 8
-# num_train_epochs = 1
-# learning_rate = 5e-5
+print(f"per_device_train_batch_size: {per_device_train_batch_size}")
+print(f"per_device_eval_batch_size: {per_device_eval_batch_size}")
+print(f"num_train_epochs: {num_train_epochs}")
+print(f"learning_rate: {learning_rate}")
+print(f"project_root: {project_root}")
+print(f"training_dataset_path: {training_dataset_path}")
+print(f"model_path: {model_path}")
+print(f"resume_from_checkpoint: {resume_from_checkpoint}")
+print(f"resume_checkpoint_path: {resume_checkpoint_path}")
+print(f"is_prefix_tuning: {is_prefix_tuning}")
+print(f"is_prompt_tuning: {is_prompt_tuning}")
+print(f"num_virtual_tokens: {num_virtual_tokens}")
+
+
+# ========================== Constants ==========================
+# per_device_train_batch_size = 1
+# per_device_eval_batch_size = 1
+# num_train_epochs = 10
+# learning_rate = 1e-6
 # project_root = "/home/snt/projects_lujun/agentCLS"
-# training_dataset_path = "assets/training_dataset/LDD_split.json"
+# training_dataset_path = "assets/training_dataset/EURLEX57K_split_equal_train_1000_val_300.jsonl"
 # model_path = "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct"
-# resume_from_checkpoint = False
-# resume_checkpoint_path = None
-# qlora = True
-# r = 16
+# is_prefix_tuning = True
+# is_prompt_tuning = False
+# num_virtual_tokens = 128
+
+
 
 train_dataset_path = os.path.abspath(os.path.join(project_root, training_dataset_path))
 sys.path.append(project_root)
 
+from utils.prompts import (
+    prompt_EUR_BASE,
+    prompt_EUR_COT,
+    prompt_EUR_COD,
+    prompt_EUR_FEW_SHOT,
+    prompt_LDD_BASE,
+    prompt_LDD_COT,
+    prompt_LDD_COD,
+    prompt_LDD_FEW_SHOT,
+    prompt_IE_BASE,
+    prompt_IE_COT,
+    prompt_IE_COD,
+    prompt_IE_FEW_SHOT,
+    prompt_SELF_CONSIS,
+)
 
-# Default Parameters
+
+peft_config = None
+resume_from_checkpoint = False
+resume_checkpoint_path = None
+train_ratio = 0.005
 tokenizer = AutoTokenizer.from_pretrained(model_path)
-tokenizer.pad_token_id = tokenizer.eos_token_id
-tokenizer.pad_token = tokenizer.eos_token
-
+input_dataset_name = train_dataset_path.split("/")[-1].split(".")[0]
+model_name = model_path.split("/")[-1]
+max_length = 4096
 train_seed = 3407
-train_ratio = 1.0
 logging_steps = 10
 eval_steps = 100
 eval_strategy = "epoch"
@@ -112,32 +116,42 @@ save_strategy = "epoch"
 save_total_limit = 2
 logging_strategy = "steps"
 max_grad_norm = 0.3
-input_dataset_name = train_dataset_path.split("/")[-1].split(".")[0]
-model_name = model_path.split("/")[-1]
-max_length = 4096
-load_in_4bit = True
-bnb_4bit_quant_type = 'nf4'
-quantization_config = None
+label_names = "labels"
+
+if "EURLEX" in training_dataset_path:
+    prompt_templates = [prompt_EUR_BASE, prompt_EUR_COT, prompt_EUR_COD, prompt_EUR_FEW_SHOT, prompt_SELF_CONSIS]
+    is_EURLEX = True
+elif "LDD" in training_dataset_path:
+    prompt_templates = [prompt_LDD_BASE, prompt_LDD_COT, prompt_LDD_COD, prompt_LDD_FEW_SHOT, prompt_SELF_CONSIS]
+    is_LDD = True
+elif "FOYER" in training_dataset_path:
+    prompt_templates = [prompt_IE_BASE, prompt_IE_COT, prompt_IE_COD, prompt_IE_FEW_SHOT, prompt_SELF_CONSIS]
+    is_IE = True
+else:
+    raise ValueError(f"Unknown dataset: {training_dataset_path}")
 
 
-if qlora:
-# Quantization with Lora
-    quantization_config = BitsAndBytesConfig(
-        load_in_4bit = load_in_4bit, # enable 4-bit quantization
-        bnb_4bit_quant_type = bnb_4bit_quant_type, # information theoretically optimal dtype for normally distributed weights
-        bnb_4bit_use_double_quant = True, # quantize quantized weights //insert xzibit meme
-        bnb_4bit_compute_dtype = torch.bfloat16 # optimized fp format for ML
+
+if tokenizer.pad_token_id is None:
+    tokenizer.pad_token_id = tokenizer.eos_token_id
+
+
+if is_prefix_tuning:
+    peft_config = PrefixTuningConfig(
+        task_type=TaskType.SEQ_CLS,
+        num_virtual_tokens=num_virtual_tokens,
+        base_model_name_or_path=model_path,
     )
 
-    # Lora
-    lora_config = LoraConfig(
-        r = r, # the dimension of the low-rank matrices
-        lora_alpha = 8, # scaling factor for LoRA activations vs pre-trained weight activations
-        target_modules = ['q_proj', 'k_proj', 'v_proj', 'o_proj'],
-        lora_dropout = 0.05, # dropout probability of the LoRA layers
-        bias = 'none', # wether to train bias weights, set to 'none' for attention layers
-        task_type = 'SEQ_CLS',
+if is_prompt_tuning:
+    peft_config = PromptTuningConfig(
+        task_type=TaskType.SEQ_CLS,
+        prompt_tuning_init=PromptTuningInit.TEXT,
+        num_virtual_tokens=num_virtual_tokens,
+        prompt_tuning_init_text=prompt_templates[0],
+        tokenizer_name_or_path=model_path,
     )
+
 
 
 if resume_from_checkpoint and resume_checkpoint_path is None:
@@ -147,8 +161,13 @@ if resume_from_checkpoint:
     output_dir = resume_checkpoint_path
 else:
     current_time = datetime.now().strftime("%m_%d_%H_%M_%S")
-    output_dir = f"{project_root}/assets/logs/SFT/{input_dataset_name}_{train_ratio}_{model_name}_output_{current_time}"
-
+    if "PREFIX_TUNING" in peft_config.peft_type:
+        output_dir = f"{project_root}/assets/logs/prompt_tuning/{input_dataset_name}_{train_ratio}_{model_name}_output_{current_time}_PREFIX_TUNING_{peft_config.num_virtual_tokens}"
+    elif "PROMPT_TUNING" in peft_config.peft_type:
+        output_dir = f"{project_root}/assets/logs/prompt_tuning/{input_dataset_name}_{train_ratio}_{model_name}_output_{current_time}_PROMPT_TUNING_{peft_config.num_virtual_tokens}"
+    else:
+        raise ValueError("Please provide a valid peft_type")
+    
 dataset = pd.read_json(train_dataset_path, lines=True)
 dataset.rename(columns={"cls_label": "labels"}, inplace=True)
 
@@ -190,6 +209,14 @@ class_label = ClassLabel(num_classes=len(labels_ids), names=labels_ids)
 train_dataset = train_dataset.cast_column("labels", class_label)
 val_dataset = val_dataset.cast_column("labels", class_label)
 
+# def apply_prompt_template(examples):
+#     # Applying the prompt template to the 'content' column
+#     return {
+#         "content": prompt_templates[0].format(input=examples["content"])
+#     }
+
+# train_dataset = train_dataset.map(apply_prompt_template)
+# val_dataset = val_dataset.map(apply_prompt_template)
 
 keep_columns = ["labels", "input_ids", "attention_mask"]
 tokenized_train_dataset = train_dataset.map(tokenize, batched=True, remove_columns=[col for col in train_dataset.column_names if col not in keep_columns])
@@ -197,18 +224,12 @@ tokenized_val_dataset = val_dataset.map(tokenize, batched=True, remove_columns=[
 train_dataset.features.keys()
 
 
-# Load model
-model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label, quantization_config=quantization_config,)
-if qlora:
-    model = get_peft_model(prepare_model_for_kbit_training(model), lora_config)
-
-model.config.pad_token_id = tokenizer.pad_token_id
-model.config.use_cache = False
-model.config.pretraining_tp = 1
-model.gradient_checkpointing_enable()
+model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label)
+model = get_peft_model(model, peft_config)
+print(model.print_trainable_parameters())
 
 
-train_dataset.features.keys()
+import json 
 
 
 def compute_metrics(eval_pred):
@@ -245,6 +266,7 @@ def train():
         report_to="tensorboard",
         disable_tqdm=False,
         seed = train_seed,
+        # label_names=list(id2label.values()),
     )
     
     # Create a Trainer instance
@@ -260,19 +282,30 @@ def train():
     print("Finished training SFT.")
     return trainer_stats
 
+def get_last_checkpoints(output_dir):
+    checkpoints = os.listdir(output_dir)
+    checkpoints = [c for c in checkpoints if "checkpoint" in c]
+    checkpoints = [int(c.split("-")[-1]) for c in checkpoints]
+    last_checkpoint = max(checkpoints)
+    return f"{output_dir}/checkpoint-{last_checkpoint}"
+
+def get_all_checkpoints(output_dir):
+    # List all checkpoint directories in output_dir
+    checkpoints = os.listdir(output_dir)
+    # Filter for directories that include 'checkpoint' in their name
+    checkpoints = [c for c in checkpoints if "checkpoint" in c]
+    # Return the full paths to all the checkpoint directories
+    return [os.path.join(output_dir, checkpoint) for checkpoint in checkpoints]
+
 
 def evaluate():
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    def get_last_checkpoints(output_dir):
-        checkpoints = os.listdir(output_dir)
-        checkpoints = [c for c in checkpoints if "checkpoint" in c]
-        checkpoints = [int(c.split("-")[-1]) for c in checkpoints]
-        last_checkpoint = max(checkpoints)
-        return f"{output_dir}/checkpoint-{last_checkpoint}"
-    
     checkpoints_path  = get_last_checkpoints(output_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(checkpoints_path).to(device)
+    config = PeftConfig.from_pretrained(checkpoints_path)
+    model = AutoModelForSequenceClassification.from_pretrained(config.base_model_name_or_path, label2id=label2id, id2label=id2label, ).to(device)
+    model = PeftModel.from_pretrained(model, checkpoints_path)
+    
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.pad_token = tokenizer.eos_token
@@ -352,15 +385,26 @@ if __name__ == "__main__":
 
     print("Finished training and evaluation.")
 
-# python llama3_FT.py \
-# --per_device_train_batch_size 8 \
-# --per_device_eval_batch_size 8 \
-# --num_train_epochs 10 \
-# --learning_rate 1e-6 \
-# --project_root /home/llama/Personal_Directories/srb/agentCLS \
-# --training_dataset_path assets/training_dataset/LDD_split_equal_train_1000_val_300.jsonl \
-# --model_path /home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct \
-# --resume_from_checkpoint "False" \
-# --resume_checkpoint_path "" \
-# --qlora False \
-# --r 16
+
+
+# python script/SPT/prompt_tuning_peft.py \
+#   --per_device_train_batch_size 1 \
+#   --per_device_eval_batch_size 1 \
+#   --num_train_epochs 10 \
+#   --learning_rate 1e-5 \
+#   --project_root "/home/snt/projects_lujun/agentCLS" \
+#   --training_dataset_path "assets/training_dataset/EURLEX57K_split_equal_train_1000_val_300.jsonl" \
+#   --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
+#   --is_prompt_tuning \
+#   --num_virtual_tokens 128
+
+# python script/SPT/prompt_tuning_peft.py \
+#   --per_device_train_batch_size 8 \
+#   --per_device_eval_batch_size 8 \
+#   --num_train_epochs 10 \
+#   --learning_rate 1e-5 \
+#   --project_root "/home/snt/projects_lujun/agentCLS" \
+#   --training_dataset_path "assets/training_dataset/EURLEX57K_split_equal_train_1000_val_300.jsonl" \
+#   --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
+#   --is_prefix_tuning \
+#   --num_virtual_tokens 128
