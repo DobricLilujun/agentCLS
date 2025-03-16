@@ -122,7 +122,7 @@ if resume_from_checkpoint:
     output_dir = resume_checkpoint_path
 else:
     current_time = datetime.now().strftime("%m_%d_%H_%M_%S")
-    output_dir = f"{project_root}/assets/logs/{input_dataset_name}_{train_ratio}_{model_name}_output_{current_time}"
+    output_dir = f"{project_root}/assets/logs/SFT/{input_dataset_name}_{train_ratio}_{model_name}_output_{current_time}"
 
 dataset = pd.read_json(train_dataset_path, lines=True)
 dataset.rename(columns={"cls_label": "labels"}, inplace=True)
