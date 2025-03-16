@@ -245,7 +245,8 @@ def evaluate():
     checkpoints_path  = get_last_checkpoints(output_dir)
     model = AutoModelForSequenceClassification.from_pretrained(checkpoints_path).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
-
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
     validation_results = []
 
     # Initialize lists to store true and predicted labels
