@@ -104,10 +104,10 @@ tokenizer.pad_token_id = tokenizer.eos_token_id
 tokenizer.pad_token = tokenizer.eos_token
 
 train_seed = 3407
-train_ratio = 0.01
+train_ratio = 1.0
 logging_steps = 10
 eval_steps = 100
-eval_strategy = "steps"
+eval_strategy = "epoch"
 save_strategy = "epoch"
 save_total_limit = 2
 logging_strategy = "steps"
@@ -233,11 +233,11 @@ def train():
         eval_steps=eval_steps,
         save_strategy=save_strategy,
         save_total_limit=save_total_limit,
-        load_best_model_at_end=False,
+        load_best_model_at_end=True,
         max_grad_norm=max_grad_norm,
         # group_by_length=True,
         # use_mps_device=True,
-        metric_for_best_model="accuracy",
+        metric_for_best_model="eval_loss",
         # push to hub parameters
         # push_to_hub=True,
         # hub_strategy="every_save",
@@ -272,7 +272,7 @@ def evaluate():
         return f"{output_dir}/checkpoint-{last_checkpoint}"
     
     checkpoints_path  = get_last_checkpoints(output_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label, quantization_config=quantization_config,).to(device)
+    model = AutoModelForSequenceClassification.from_pretrained(checkpoints_path, num_labels=num_labels, label2id=label2id, id2label=id2label, quantization_config=quantization_config,).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     tokenizer.pad_token_id = tokenizer.eos_token_id
     tokenizer.pad_token = tokenizer.eos_token

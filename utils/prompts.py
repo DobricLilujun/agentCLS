@@ -1,98 +1,119 @@
 
-prompt_eurlex57k_description_classification = """Classify the given input text into one of the following categories based on the descriptions provided.
+prompt_EUR_BASE= """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning.
+
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
 
 Categories:
 1. **Decision** - Choose this category if the text involves making a choice or selecting an option.
 2. **Directive** - Use this category if the text instructs or commands an action.
 3. **Regulation** - Appropriate for texts that stipulate rules or guidelines.
 
-Text for Classification:
-
-
-Input text: 
-
-<<<START_INPUT>>>
+<<<START OF INPUT>>>
 
 {input}
 
-<<<END_INPUT>>>
+<<<END OF INPUT>>>
 """
 
-prompt_eurlex57k_COT_classification = """To accurately classify the input text, consider the following category descriptions: 
-- **Decision**: Texts that involve making or describing decisions. 
-- **Directive**: Texts that instruct or command specific actions. 
-- **Regulation**: Texts that outline rules, guidelines, or laws. 
+prompt_EUR_COT = """Think step by step to answer the following question. Return the classification answer at the end of response after a separator ####.
 
-To accurately classify text into the categories of 'Decision', 'Directive', or 'Regulation', follow this structured reasoning process: 
-1. Begin by comprehensively reading the text to grasp its content and intent. 
-2. Evaluate whether the text primarily involves making a choice or reaching a conclusion, which would classify it as a 'Decision'. Identify critical phrases and structures that suggest a decision-making process. Place this assessment under the reasoning field. 
-3. If the text primarily directs or instructs actions, categorize it as a 'Directive'. Look for directive language or commands that are indicative of this classification. This evaluation should also be placed under the reasoning field. 
-4. Assess if the text establishes rules or guidelines, categorizing it as a 'Regulation'. Search for terms and formats typical of regulatory texts and include this in the reasoning field. 
-5. After completing these reasoning steps, assign the text to the most fitting category based on the evidence gathered. This conclusion should be detailed in the conclusion field. {input}
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
 
-Please classify the following input text into the appropriate category: 
+Categories:
+1. **Decision** - Choose this category if the text involves making a choice or selecting an option.
+2. **Directive** - Use this category if the text instructs or commands an action.
+3. **Regulation** - Appropriate for texts that stipulate rules or guidelines.
 
-Input text: 
-
-<<<START_INPUT>>>
+<<<START OF INPUT>>>
 
 {input}
 
-<<<END_INPUT>>>
+<<<END OF INPUT>>>
+"""
+
+prompt_EUR_COD = """Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. Return the answer at the end of the response after a separator ####.
+
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
+
+Categories:
+1. **Decision** - Choose this category if the text involves making a choice or selecting an option.
+2. **Directive** - Use this category if the text instructs or commands an action.
+3. **Regulation** - Appropriate for texts that stipulate rules or guidelines.
+
+<<<START OF INPUT>>>
+
+{input}
+
+<<<END OF INPUT>>>
 """
 
 
 
-prompt_eurlex57k_few_shots_classification = """## Task Description
-Your task is to classify input texts based on specific categories. Each category has unique characteristics that the text must exhibit to be classified accordingly. The objective is to ensure accurate classification by critically analyzing the content, context, and specific details of the input text.
+prompt_EUR_FEW_SHOT = """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning.
 
-## Category Descriptions
+Classify the **input** text into one of the following categories based on the descriptions and examples provided, and explicitly provide the output classification at the end. 
 
-### Label: Regulation  
-**Description:** Texts that detail formal regulations issued by governmental or other authoritative bodies. These texts typically specify rules or laws that are legally binding and directly applicable across relevant jurisdictions. They often include details such as effective dates, the entities affected, and the specific mandates or prohibitions imposed.
+Categories:
+1. **Decision** - Choose this category if the text involves making a choice or selecting an option.
+2. **Directive** - Use this category if the text instructs or commands an action.
+3. **Regulation** - Appropriate for texts that stipulate rules or guidelines.
 
-### Label: Directive  
-**Description:** The "Directive" category is designated for texts that detail formal legislative directives issued by authoritative bodies such as the European Parliament and the Council. These texts typically discuss amendments to existing laws, set new regulatory standards, and outline implementation guidelines and deadlines. The content should reflect the introduction or modification of policies, particularly in the context of environmental, health, or safety regulations.
 
 ## Examples for Classification
 
-### Example 1: Regulation
+### Example: 
 **Input Text:**  
 "Commission Regulation (EEC) No 3644/88, enacted on 23 November 1988, established the minimum price for blood oranges withdrawn from the market and sold to processing industries for the 1988/89 marketing year. This regulation, rooted in the Treaty establishing the European Economic Community and Council Regulation (EEC) No 1035/72, specifies that the minimum selling price should be set prior to each marketing year, considering the normal supply price to the industry. For the specified marketing year, the price was fixed at 52.42 ECU per tonne net, ex warehouse. The regulation, which aligns with the advice of the Management Committee for Fruit and Vegetables, became effective on 1 December 1988 and is legally binding and directly applicable across all Member States. This measure ensures a standardized price for blood oranges destined for processing, reflecting broader market management strategies within the European Economic Community's framework for fruit and vegetables."
+#### 
+Regulation
 
-**Classification Reasoning:**  
-This text outlines a specific regulation setting a minimum price for blood oranges, indicating the effective date and the legal framework it operates within, thereby affecting the relevant market practices. It also mentions the direct applicability and binding nature of the rule across Member States, characteristics typical of regulatory texts.
 
-**Assigned Category:** Regulation
-
-### Example 2: Directive
+### Example: 
 **Input Text:**  
 "Directive 2003/87/EC established a scheme for greenhouse gas emission allowance trading within the Community, in line with the Kyoto Protocol's objectives. This Directive lays down measures aimed at reducing greenhouse gas emissions significantly to combat climate change. It provides for a cap on the total amount of certain greenhouse gases that can be emitted by installations covered by the scheme and allows for the trading of emission allowances. This system aims to reduce emissions economically and effectively, ensuring that the Community can meet its Kyoto targets."
+#### 
+Directive
 
+### Example: 
+**Input Text:**  
+"Council Decision 2007/621/EC, Euratom appoints Ms. Mette Kindberg as a Danish member of the European Economic and Social Committee, replacing Ms. Randi Iversen, who resigned. Her appointment lasts for the remainder of the term until September 20, 2010. The decision takes effect upon adoption."  
 **Classification Reasoning:**  
-This text describes a legislative directive issued by the European Union that sets regulatory standards for greenhouse gas emissions, aligns with international environmental goals, and outlines a trading scheme for emission allowances. It clearly specifies the policy's purpose, its implementation mechanism, and its alignment with broader environmental objectives, fitting well within the "Directive" category.
+This text describes an official decision made by the European Council regarding the appointment of a specific individual to a committee. It specifies the replacement of a member, the duration of the appointment, and the decision's immediate effect upon adoption. Since it involves a concrete administrative action rather than broad legislative regulations, it fits within the "Decision" category.  
+#### 
+Decision 
 
-**Assigned Category:** Directive
-
-## Instructions for Classification
-When analyzing an input text, adhere to the following steps:
-1. **Read and Comprehend the Text:** Ensure a thorough understanding of the policy details, regulatory standards, and implementation guidelines discussed.
-2. **Evaluate Against Criteria:** Assess whether the text details a formal legislative directive or a regulation, considering the characteristics described in the respective category description.
-3. **Make Your Classification:** Based on the content and context provided in the text, classify it into the appropriate category.
-
-Please classify the following input text into the appropriate category:
-
-Input text: 
-
-<<<START_INPUT>>>
+<<<START OF INPUT>>>
 
 {input}
 
-<<<END_INPUT>>>
+<<<END OF INPUT>>>
 """
 
-prompt_LDD_description_classification = """To accurately classify the input text, first understand its content and context, then match it to the most appropriate category based on the descriptions provided below:
+prompt_SELF_CONSIS = """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning. 
 
+You will be provided three thinking paths for answering the text classification question, and the conclusions from the three paths will be compared. If two or more paths arrive at the same classification result, that will be selected as the most consistent answer; if all three paths differ, answer with the most plausible classification based on the overall reasoning.
+
+Question: 
+{question_prompt}
+
+Path 1:
+{path_1}
+
+Path 2:
+{path_2}
+
+Path 3:
+{path_3}
+
+Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning. 
+"""
+
+
+prompt_LDD_BASE = """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning.
+
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
+
+Categories:
 - **cs.AI**: Involves topics related to Artificial Intelligence.
 - **cs.CE**: Related to Computational Engineering.
 - **cs.CV**: Pertains to Computer Vision.
@@ -105,111 +126,228 @@ prompt_LDD_description_classification = """To accurately classify the input text
 - **math.GR**: Involves Group Theory.
 - **math.ST**: Related to Statistics Theory.
 
-Please classify the following input text into the appropriate category based on the descriptions above:
-
-Input text: 
-
-<<<START_INPUT>>>
+<<<START OF INPUT>>>
 
 {input}
 
-<<<END_INPUT>>>
+<<<END OF INPUT>>>
 """
 
-prompt_LDD_COT_classification = """To ensure accurate classification of the input text into the appropriate category, follow these structured reasoning steps: 
-1. **Analyze Input Text**: Begin by closely examining the input text. Identify key ideas and specific terminologies that relate closely to the categories listed below. Pay attention to unique concepts or phrases indicative of particular fields.
-2. **Review Category Descriptions**: Read and understand the scope and focus of each category. Here are the descriptions to guide you:
-   - 'cs.AI': Focuses on Artificial Intelligence, involving algorithms, machine learning techniques, and AI applications.
-   - 'cs.CE': Encompasses Computational Engineering, including simulations, system design, and computational methods in engineering.
-   - 'cs.CV': Pertains to Computer Vision, dealing with image recognition, processing, and computer-based visual tasks.
-   - 'cs.DS': Involves Data Structures, emphasizing data organization, management, and storage structures.
-   - 'cs.IT': Related to Information Theory, covering data transmission, encoding, and compression methodologies.
-   - 'cs.NE': Deals with Neural and Evolutionary Computing, focusing on neural networks, genetic algorithms, and adaptive systems.
-   - 'cs.PL': Concerns Programming Languages, including syntax, semantics, and language design.
-   - 'cs.SY': Relates to Systems and Control, focusing on control systems, automation, and system dynamics.
-   - 'math.AC': Involves Commutative Algebra, dealing with rings, modules, and algebraic structures.
-   - 'math.GR': Pertains to Group Theory, focusing on mathematical groups, symmetries, and group structures.
-   - 'math.ST': Deals with Statistics Theory, focusing on statistical methods and applications.
-3. **Match Themes with Categories**: Compare the identified themes and terminologies from the input text with the provided category descriptions. Evaluate which category aligns best with the content of the text.
-4. **Classify and Justify**: Conclude by categorizing the text into the most fitting category based on your analysis. Provide a detailed justification for your choice, explaining how the themes and terminologies from the text align with the category's focus.
+prompt_LDD_COT = """Think step by step to answer the following question. Return the classification answer at the end of response after a separator ####.
 
-Input text: {input}
-"""
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
 
+Categories:
+- **cs.AI**: Involves topics related to Artificial Intelligence.
+- **cs.CE**: Related to Computational Engineering.
+- **cs.CV**: Pertains to Computer Vision.
+- **cs.DS**: Concerns Data Structures.
+- **cs.IT**: Deals with Information Theory.
+- **cs.NE**: Focuses on Neural and Evolutionary Computing.
+- **cs.PL**: Involves Programming Languages.
+- **cs.SY**: Related to Systems and Control.
+- **math.AC**: Pertains to Commutative Algebra.
+- **math.GR**: Involves Group Theory.
+- **math.ST**: Related to Statistics Theory.
 
-prompt_LDD_few_shots_classification = """This prompt is designed to guide the classification of text into specific categories based on detailed descriptions. Each category is associated with a particular field or topic, and the provided examples will help in identifying the correct category for a given input text.
-
-#### Category Descriptions:
-1. **cs.AI (Artificial Intelligence)**: Texts discussing concepts, theories, or applications in the realm of artificial intelligence, including machine learning, game theory, and AI-driven optimizations.
-2. **cs.CE (Computational Engineering)**: Involves content related to engineering approaches that utilize computational methods and simulations, including optimizations and system designs.
-3. **cs.CV (Computer Vision)**: Pertains to texts dealing with image processing, visual data interpretation, and related algorithmic developments.
-4. **cs.DS (Data Structures)**: Includes discussions on algorithms, data structures, and their applications in various computational processes.
-5. **cs.IT (Information Theory)**: Texts that explore concepts like data encryption, compression, and transmission, focusing on the theoretical underpinnings of information processing.
-6. **cs.NE (Neural and Evolutionary)**: Covers advancements and studies in neural networks, evolutionary algorithms, and their cognitive and computational implications.
-7. **cs.PL (Programming Languages)**: Texts discussing syntax, semantics, and the development of programming languages, including theoretical and practical aspects.
-8. **cs.SY (Systems and Control)**: Involves control theory, systems engineering, and their applications in designing and managing complex systems.
-9. **math.AC (Commutative Algebra)**: Texts focusing on algebraic structures and their properties, with a special emphasis on theories related to commutativity.
-10. **math.GR (Group Theory)**: Discussions on mathematical groups, their properties, and applications in various mathematical and computational fields.
-11. **math.ST (Statistics Theory)**: Involves detailed discussions on statistical methodologies, theories, and their applications in data analysis and interpretation.
-
-#### Examples for Classification:
-- **Example for cs.AI**:
-  - *Input*: "This paper introduces a novel algorithm for optimizing neural network architecture using evolutionary strategies."
-  - *Category*: cs.AI
-
-- **Example for cs.CE**:
-  - *Input*: "A study on the computational modeling of fluid dynamics in complex engineering systems."
-  - *Category*: cs.CE
-
-- **Example for cs.CV**:
-  - *Input*: "Enhancements in facial recognition algorithms through deep learning techniques."
-  - *Category*: cs.CV
-
-- **Example for cs.DS**:
-  - *Input*: "Optimizing search algorithms for faster retrieval in database management systems."
-  - *Category*: cs.DS
-
-- **Example for cs.IT**:
-  - *Input*: "Exploring new methods for data compression in high-speed networks."
-  - *Category*: cs.IT
-
-- **Example for cs.NE**:
-  - *Input*: "The impact of genetic algorithms on solving complex optimization problems."
-  - *Category*: cs.NE
-
-- **Example for cs.PL**:
-  - *Input*: "Developing a new functional programming language designed for concurrent computing."
-  - *Category*: cs.PL
-
-- **Example for cs.SY**:
-  - *Input*: "Innovative control strategies for autonomous drone navigation."
-  - *Category*: cs.SY
-
-- **Example for math.AC**:
-  - *Input*: "Research on the application of Noetherian rings in solving algebraic geometry problems."
-  - *Category*: math.AC
-
-- **Example for math.GR**:
-  - *Input*: "Analyzing the symmetrical properties of finite groups and their applications in cryptography."
-  - *Category*: math.GR
-
-- **Example for math.ST**:
-  - *Input*: "Using Bayesian networks to predict stock market trends based on historical data."
-  - *Category*: math.ST
-
-#### Task:
-Classify the following text into the appropriate category based on the descriptions and examples provided above.
-
-Input text: 
-
-<<<START_INPUT>>>
+<<<START OF INPUT>>>
 
 {input}
 
-<<<END_INPUT>>>
+<<<END OF INPUT>>>
+"""
+
+prompt_LDD_COD = """Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. Return the answer at the end of the response after a separator ####.
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
+
+Categories:
+- **cs.AI**: Involves topics related to Artificial Intelligence.
+- **cs.CE**: Related to Computational Engineering.
+- **cs.CV**: Pertains to Computer Vision.
+- **cs.DS**: Concerns Data Structures.
+- **cs.IT**: Deals with Information Theory.
+- **cs.NE**: Focuses on Neural and Evolutionary Computing.
+- **cs.PL**: Involves Programming Languages.
+- **cs.SY**: Related to Systems and Control.
+- **math.AC**: Pertains to Commutative Algebra.
+- **math.GR**: Involves Group Theory.
+- **math.ST**: Related to Statistics Theory.
+
+<<<START OF INPUT>>>
+
+{input}
+
+<<<END OF INPUT>>>
 """
 
 
+prompt_LDD_FEW_SHOT = """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning.
+
+Classify the **input** text into one of the following categories based on the descriptions provided, and explicitly provide the output classification at the end. 
+
+Categories:
+- **cs.AI**: Involves topics related to Artificial Intelligence.
+- **cs.CE**: Related to Computational Engineering.
+- **cs.CV**: Pertains to Computer Vision.
+- **cs.DS**: Concerns Data Structures.
+- **cs.IT**: Deals with Information Theory.
+- **cs.NE**: Focuses on Neural and Evolutionary Computing.
+- **cs.PL**: Involves Programming Languages.
+- **cs.SY**: Related to Systems and Control.
+- **math.AC**: Pertains to Commutative Algebra.
+- **math.GR**: Involves Group Theory.
+- **math.ST**: Related to Statistics Theory.
+
+## Examples for Classification:
+
+### Example: 
+**Input Text:** 
+This paper introduces a novel algorithm for optimizing neural network architecture using evolutionary strategies.
+####
+cs.AI
+
+### Example: 
+**Input Text:** 
+A study on the computational modeling of fluid dynamics in complex engineering systems.
+####
+cs.CE
+
+### Example: 
+**Input Text:** 
+Enhancements in facial recognition algorithms through deep learning techniques.
+####
+cs.CV
+
+### Example: 
+**Input Text:**
+Optimizing search algorithms for faster retrieval in database management systems.
+####
+cs.DS
+
+### Example: 
+**Input Text:**
+Exploring new methods for data compression in high-speed networks.
+####
+cs.IT
+
+### Example: 
+**Input Text:**
+The impact of genetic algorithms on solving complex optimization problems.
+####
+cs.NE
+
+### Example: 
+**Input Text:**
+Developing a new functional programming language designed for concurrent computing.
+####
+cs.PL
+
+### Example: 
+**Input Text:**
+Innovative control strategies for autonomous drone navigation.
+####
+cs.SY
+
+### Example: 
+**Input Text:**
+Research on the application of Noetherian rings in solving algebraic geometry problems.
+####
+math.AC
+
+### Example: 
+**Input Text:**
+Analyzing the symmetrical properties of finite groups and their applications in cryptography.
+####
+math.GR
+
+### Example: 
+**Input Text:**
+Using Bayesian networks to predict stock market trends based on historical data.
+####
+math.ST
+
+<<<START OF INPUT>>>
+
+{input}
+
+<<<END OF INPUT>>>
+"""
+
+
+prompt_IE_BASE = """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning.
+
+Classify the latest email in the provided email history into one of the following categories based on the descriptions, and explicitly provide the output classification at the end.
+
+Categories:
+- **Reminder**: Choose this category if the latest email references a past request, follow-up, or attempts to prompt the recipient about an earlier communication.
+- **Not Reminder**: Use this category if the latest email introduces a new topic, does not reference past communication, or does not act as a follow-up.
+
+<<<START OF EMAIL HISTORY>>>
+
+{input}
+
+<<<END OF EMAIL HISTORY>>>"""
+
+
+prompt_IE_COT = """Think step by step to answer the following question. Return the classification answer at the end of response after a separator ####.
+
+Classify the latest email in the provided email history into one of the following categories based on the descriptions, and explicitly provide the output classification at the end.
+
+Categories:
+- **Reminder**: Choose this category if the latest email references a past request, follow-up, or attempts to prompt the recipient about an earlier communication.
+- **Not Reminder**: Use this category if the latest email introduces a new topic, does not reference past communication, or does not act as a follow-up.
+
+<<<START OF EMAIL HISTORY>>>
+
+{input}
+
+<<<END OF EMAIL HISTORY>>>
+"""
+
+prompt_IE_COD = """Think step by step, but only keep a minimum draft for each thinking step, with 5 words at most. Return the answer at the end of the response after a separator ####.
+
+Classify the latest email in the provided email history into one of the following categories based on the descriptions, and explicitly provide the output classification at the end.
+
+Categories:
+- **Reminder**: Choose this category if the latest email references a past request, follow-up, or attempts to prompt the recipient about an earlier communication.
+- **Not Reminder**: Use this category if the latest email introduces a new topic, does not reference past communication, or does not act as a follow-up.
+
+<<<START OF EMAIL HISTORY>>>
+
+{input}
+
+<<<END OF EMAIL HISTORY>>>
+"""
+
+
+prompt_IE_FEW_SHOT = """Return the classification answer after a separator ####. Do not return any preamble, explanation, or reasoning.
+Classify the latest email in the provided email history into one of the following categories based on the descriptions and examples provided, and explicitly provide the output classification at the end.
+
+Categories:
+- **Reminder**: Choose this category if the latest email references a past request, follow-up, or attempts to prompt the recipient about an earlier communication.
+- **Not Reminder**: Use this category if the latest email introduces a new topic, does not reference past communication, or does not act as a follow-up.
+
+## Examples for Classification
+
+### Example: 
+**Input Email History:**  
+For some time now, we have not heard from you. Could you inform us by 05/02/2024 of the current status of this file? 
+#### 
+Reminder
+
+
+### Example: 
+**Input Email History:**  
+We allow ourselves to return to this matter. We are waiting for the confirmation of the guarantees and responsibility of our principal. We are following up with our principal.
+#### 
+Reminder
+
+<<<START OF EMAIL HISTORY>>>
+
+{input}
+
+<<<END OF EMAIL HISTORY>>>
+"""
 
 
 # This is a META prompt template from OpenAI

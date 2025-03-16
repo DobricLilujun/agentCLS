@@ -1,3 +1,4 @@
 reference/
 assets/
 .vscode/
+*.log

@@ -39,6 +39,9 @@ import numpy as np
 import torch
 from transformers import EarlyStoppingCallback
 
+
+# For Modern BERT don't set the pad token, it has it already when you load the tokenizer!!!
+
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 warnings.simplefilter("ignore")
@@ -97,11 +100,12 @@ train_dataset_path = os.path.abspath(os.path.join(project_root, training_dataset
 sys.path.append(project_root)
 
 tokenizer = AutoTokenizer.from_pretrained(model_path)
+
 train_seed = 3407
 train_ratio = 1.0
 logging_steps = 10
 eval_steps = 100
-eval_strategy = "steps"
+eval_strategy = "epoch"
 save_strategy = "epoch"
 save_total_limit = 2
 logging_strategy = "steps"
@@ -200,12 +204,12 @@ def train():
         eval_strategy=eval_strategy,
         eval_steps=eval_steps,
         save_strategy=save_strategy,
-        # save_total_limit=save_total_limit,
-        load_best_model_at_end=False,
+        save_total_limit=save_total_limit,
+        load_best_model_at_end=True,
         max_grad_norm=max_grad_norm,
         # group_by_length=True,
         # use_mps_device=True,
-        metric_for_best_model="accuracy",
+        metric_for_best_model="eval_loss",
         # push to hub parameters
         # push_to_hub=True,
         # hub_strategy="every_save",
@@ -241,6 +245,7 @@ def evaluate():
     checkpoints_path  = get_last_checkpoints(output_dir)
     model = AutoModelForSequenceClassification.from_pretrained(checkpoints_path).to(device)
     tokenizer = AutoTokenizer.from_pretrained(model_path)
+
     validation_results = []
 
     # Initialize lists to store true and predicted labels
