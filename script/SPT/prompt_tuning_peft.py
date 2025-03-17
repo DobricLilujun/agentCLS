@@ -198,31 +198,16 @@ labels =  set(train_dataset['labels'])
 num_labels = len(labels)
 label2id, id2label = dict(), dict()
 for i, label in enumerate(labels):
-    label2id[label] = str(i)
-    id2label[str(i)] = label
+    label2id[label] = i
+    id2label[i] = label
 
-train_dataset = train_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
-val_dataset = val_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
-
-labels_ids = list(set(train_dataset['labels']))
-class_label = ClassLabel(num_classes=len(labels_ids), names=labels_ids)
-train_dataset = train_dataset.cast_column("labels", class_label)
-val_dataset = val_dataset.cast_column("labels", class_label)
-
-# def apply_prompt_template(examples):
-#     # Applying the prompt template to the 'content' column
-#     return {
-#         "content": prompt_templates[0].format(input=examples["content"])
-#     }
-
-# train_dataset = train_dataset.map(apply_prompt_template)
-# val_dataset = val_dataset.map(apply_prompt_template)
+train_dataset = train_dataset.map( lambda x: {"labels":label2id[x["labels"]]} )
+val_dataset = val_dataset.map( lambda x: {"labels": label2id[x["labels"]]})
 
 keep_columns = ["labels", "input_ids", "attention_mask"]
 tokenized_train_dataset = train_dataset.map(tokenize, batched=True, remove_columns=[col for col in train_dataset.column_names if col not in keep_columns])
 tokenized_val_dataset = val_dataset.map(tokenize, batched=True, remove_columns=[col for col in val_dataset.column_names if col not in keep_columns])
 train_dataset.features.keys()
-
 
 model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label)
 model = get_peft_model(model, peft_config)
