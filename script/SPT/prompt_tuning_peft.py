@@ -17,6 +17,7 @@ from peft import PeftModel, PeftConfig
 import time
 import os
 import argparse
+import json
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -103,7 +104,7 @@ from utils.prompts import (
 peft_config = None
 resume_from_checkpoint = False
 resume_checkpoint_path = None
-train_ratio = 0.005
+train_ratio = 1.0
 tokenizer = AutoTokenizer.from_pretrained(model_path)
 input_dataset_name = train_dataset_path.split("/")[-1].split(".")[0]
 model_name = model_path.split("/")[-1]
@@ -201,6 +202,14 @@ for i, label in enumerate(labels):
     label2id[label] = i
     id2label[i] = label
 
+
+os.makedirs(output_dir, exist_ok=True)
+data = {"label2id": label2id, "id2label": id2label}
+json_file_path = os.path.join(output_dir, "adapter_labels.json")
+
+with open(json_file_path, "w") as json_file:
+    json.dump(data, json_file, indent=4)
+
 train_dataset = train_dataset.map( lambda x: {"labels":label2id[x["labels"]]} )
 val_dataset = val_dataset.map( lambda x: {"labels": label2id[x["labels"]]})
 
@@ -211,6 +220,7 @@ train_dataset.features.keys()
 
 model = AutoModelForSequenceClassification.from_pretrained(model_path, num_labels=num_labels, label2id=label2id, id2label=id2label)
 model = get_peft_model(model, peft_config)
+
 print(model.print_trainable_parameters())
 
 
@@ -314,9 +324,9 @@ def evaluate():
         logits = model_output.logits
         probabilities = torch.nn.functional.softmax(logits, dim=-1)
         predicted_class_idx = torch.argmax(probabilities, dim=-1).item()
-        predicted_label = id2label[str(predicted_class_idx)]
+        predicted_label = id2label[predicted_class_idx]
         
-        true_label = id2label[str(true_label_idx)]
+        true_label = id2label[true_label_idx]
         true_label_one_hot = np.zeros(probabilities.size(-1))
         true_label_one_hot[true_label_idx] = 1
 
@@ -376,9 +386,9 @@ if __name__ == "__main__":
 #   --per_device_train_batch_size 1 \
 #   --per_device_eval_batch_size 1 \
 #   --num_train_epochs 10 \
-#   --learning_rate 1e-5 \
+#   --learning_rate 1e-6 \
 #   --project_root "/home/snt/projects_lujun/agentCLS" \
-#   --training_dataset_path "assets/training_dataset/EURLEX57K_split_equal_train_1000_val_300.jsonl" \
+#   --training_dataset_path "assets/training_dataset/EURLEX57K_split_proportional_train_150_val_300.jsonl" \
 #   --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
 #   --is_prompt_tuning \
 #   --num_virtual_tokens 128
