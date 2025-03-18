@@ -150,17 +150,12 @@ labels =  set(train_dataset['labels'])
 num_labels = len(labels)
 label2id, id2label = dict(), dict()
 for i, label in enumerate(labels):
-    label2id[label] = str(i)
-    id2label[str(i)] = label
+    label2id[label] = i
+    id2label[i] = label
 
 
 train_dataset = train_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
 val_dataset = val_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
-
-labels_ids = list(set(train_dataset['labels']))
-class_label = ClassLabel(num_classes=len(labels_ids), names=labels_ids)
-train_dataset = train_dataset.cast_column("labels", class_label)
-val_dataset = val_dataset.cast_column("labels", class_label)
 
 
 def tokenize(examples):
@@ -267,9 +262,9 @@ def evaluate():
         logits = model_output.logits
         probabilities = torch.nn.functional.softmax(logits, dim=-1)
         predicted_class_idx = torch.argmax(probabilities, dim=-1).item()
-        predicted_label = id2label[str(predicted_class_idx)]
+        predicted_label = id2label[predicted_class_idx]
         
-        true_label = id2label[str(true_label_idx)]
+        true_label = id2label[true_label_idx]
         true_label_one_hot = np.zeros(probabilities.size(-1))
         true_label_one_hot[true_label_idx] = 1
 

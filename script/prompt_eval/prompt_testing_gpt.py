@@ -134,7 +134,7 @@ def create_prompt(sample, prompt_template, model_name):
     
     return messages
 
-def call_chatgpt(messages, model_name = "gpt-4o", max_len=100, temperature=1.0):
+def call_chatgpt(messages, model_name = "gpt-4o-mini", max_len=100, temperature=1.0):
     """
     Function to call the OpenAI API (ChatGPT) instead of VLLM API.
     """
@@ -249,7 +249,7 @@ def generate_dataset_responses(dataset,prompt_template, eval_output_path):
     for index, sample in tqdm(dataset.iterrows(), total=len(dataset), desc="Generating responses"):
         start_time = datetime.now()
         messages = create_prompt(sample, prompt_template=prompt_template, model_name=model_name)
-        llm_response = call_chatgpt(messages = messages, model_name = "gpt-4o", max_len=MAX_LEN, temperature=temperature).strip()
+        llm_response = call_chatgpt(messages = messages, model_name = "gpt-4o-mini", max_len=MAX_LEN, temperature=temperature).strip()
         ground_truth_cls = sample["cls_label"]
         parsed_cls = parse_classification(llm_response, list_categories)
         y_true.append(ground_truth_cls)
@@ -293,9 +293,9 @@ def generate_dataset_responses_SIS(dataset, prompt_template_SIS , prompt_templat
         ## Generate Three Paths
         start_time = datetime.now()
         messages_COT = create_prompt(sample, prompt_template=prompt_template_COT, model_name=model_name)
-        paths = [ call_chatgpt(messages = messages_COT, model_name="gpt-4o", max_len=MAX_LEN, temperature=temperature).strip() for i in range(rep)]
+        paths = [ call_chatgpt(messages = messages_COT, model_name="gpt-4o-mini", max_len=MAX_LEN, temperature=temperature).strip() for i in range(rep)]
         messages_SIS = create_SIS_prompt(sample, prompt_template=prompt_template_SIS, path1=paths[0], path2=paths[1], path3=paths[2], model_name=model_name)
-        llm_response = call_chatgpt(messages = messages_SIS, model_name="gpt-4o", max_len=MAX_LEN, temperature=temperature).strip()
+        llm_response = call_chatgpt(messages = messages_SIS, model_name="gpt-4o-mini", max_len=MAX_LEN, temperature=temperature).strip()
         ground_truth_cls = sample["cls_label"]
         parsed_cls = parse_classification(llm_response, list_categories)
         y_true.append(ground_truth_cls)

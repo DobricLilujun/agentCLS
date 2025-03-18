@@ -397,9 +397,9 @@ if __name__ == "__main__":
 #   --per_device_train_batch_size 8 \
 #   --per_device_eval_batch_size 8 \
 #   --num_train_epochs 10 \
-#   --learning_rate 1e-5 \
+#   --learning_rate 1e-6 \
 #   --project_root "/home/snt/projects_lujun/agentCLS" \
 #   --training_dataset_path "assets/training_dataset/EURLEX57K_split_equal_train_1000_val_300.jsonl" \
-#   --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
-#   --is_prefix_tuning \
+#   --model_path "/home/snt/llm_models/ModernBERT-base" \
+#   --is_prompt_tuning \
 #   --num_virtual_tokens 128
