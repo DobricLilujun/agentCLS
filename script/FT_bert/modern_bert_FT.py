@@ -38,7 +38,7 @@ import numpy as np
 # Data preparation
 import torch
 from transformers import EarlyStoppingCallback
-
+import json
 
 # For Modern BERT don't set the pad token, it has it already when you load the tokenizer!!!
 
@@ -153,6 +153,13 @@ for i, label in enumerate(labels):
     label2id[label] = i
     id2label[i] = label
 
+
+os.makedirs(output_dir, exist_ok=True)
+data = {"label2id": label2id, "id2label": id2label}
+json_file_path = os.path.join(output_dir, "adapter_labels.json")
+
+with open(json_file_path, "w") as json_file:
+    json.dump(data, json_file, indent=4)
 
 train_dataset = train_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
 val_dataset = val_dataset.map(lambda x: {"labels": label2id[x["labels"]]})
