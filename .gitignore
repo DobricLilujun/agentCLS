@@ -2,3 +2,4 @@ reference/
 assets/
 .vscode/
 *.log
+results/
