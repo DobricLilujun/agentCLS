@@ -43,9 +43,9 @@ def parse_args():
     parser.add_argument("--per_device_eval_batch_size", type=int, default=8, help="Batch size per device during evaluation")
     parser.add_argument("--num_train_epochs", type=int, default=1, help="Number of training epochs")
     parser.add_argument("--learning_rate", type=float, default=1e-6, help="Learning rate for training")
-    parser.add_argument("--project_root", type=str, default="/Users/lujun.li/projects/mt_luxembourgish", help="Path to project root")
+    parser.add_argument("--project_root", type=str, default="", help="Path to project root")
     parser.add_argument("--training_dataset_path", type=str, default="data/processed/dataset_merged_llama_fake_targets.jsonl", help="Path to training dataset")
-    parser.add_argument("--model_path", type=str, default="/home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct", help="Path to model")
+    parser.add_argument("--model_path", type=str, default="Llama-3.2-3B-Instruct", help="Path to model")
     parser.add_argument("--resume_from_checkpoint", type=bool, default=False, help="Resume training from checkpoint")
     parser.add_argument("--resume_checkpoint_path", type=str, default=None, help="Path to checkpoint to resume training from")
     parser.add_argument("--qlora", type=bool, default=False, help="Use QLoRA")
@@ -80,19 +80,6 @@ resume_checkpoint_path = args.resume_checkpoint_path
 qlora = args.qlora
 r = args.r
 
-
-## Data preparation
-# per_device_train_batch_size = 8
-# per_device_eval_batch_size = 8
-# num_train_epochs = 1
-# learning_rate = 5e-5
-# project_root = "/home/snt/projects_lujun/agentCLS"
-# training_dataset_path = "assets/training_dataset/LDD_split.json"
-# model_path = "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct"
-# resume_from_checkpoint = False
-# resume_checkpoint_path = None
-# qlora = True
-# r = 16
 
 train_dataset_path = os.path.abspath(os.path.join(project_root, training_dataset_path))
 sys.path.append(project_root)
@@ -346,16 +333,3 @@ if __name__ == "__main__":
     eval_results = evaluate()
 
     print("Finished training and evaluation.")
-
-# python llama3_FT.py \
-# --per_device_train_batch_size 8 \
-# --per_device_eval_batch_size 8 \
-# --num_train_epochs 10 \
-# --learning_rate 1e-6 \
-# --project_root /home/llama/Personal_Directories/srb/agentCLS \
-# --training_dataset_path assets/training_dataset/LDD_split_equal_train_1000_val_300.jsonl \
-# --model_path /home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct \
-# --resume_from_checkpoint "False" \
-# --resume_checkpoint_path "" \
-# --qlora False \
-# --r 16

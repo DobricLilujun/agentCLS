@@ -10,7 +10,7 @@ from openai import OpenAI
 
 
 
-file_path= "/home/snt/projects_lujun/agentCLS/.vscode/.openai_api_token"
+file_path= ".vscode/.openai_api_token"
 with open(file_path, 'r') as file:
     api_token = file.read().strip()
 client = OpenAI(api_key = api_token)
@@ -35,17 +35,6 @@ args = parse_args()
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-
-
-# project_root = "/home/snt/projects_lujun/agentCLS"
-# training_dataset_path = "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl"
-# model_path = "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct"
-# VLLM_API_URL = "http://0.0.0.0:8000/v1/chat/completions"
-# is_BASE = True
-# is_COT = True
-# is_COD = True
-# is_FEW_SHOT = True
-# is_SELF_CONSIS = True
 
 project_root = args.project_root
 
@@ -364,28 +353,5 @@ if is_SELF_CONSIS:
 
 print("[INFO] Prompt testing completed!")
 
-
-
-# python script/prompt_eval/prompt_testing_gpt.py \
-#     --project_root "/home/snt/projects_lujun/agentCLS" \
-#     --training_dataset_path "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl" \
-#     --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
-#     --vllm_url "http://0.0.0.0:8000/v1/chat/completions" \
-#     --is_BASE \
-#     --is_COT \
-#     --is_COD \
-#     --is_FEW_SHOT \
-#     --is_SELF_CONSIS
-
-# python script/prompt_eval/prompt_testing_gpt.py \
-#     --project_root "/home/snt/projects_lujun/agentCLS" \
-#     --training_dataset_path "assets/training_dataset/LDD_split_proportional_train_1500_val_300.jsonl" \
-#     --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
-#     --vllm_url "http://0.0.0.0:8000/v1/chat/completions" \
-#     --is_BASE \
-#     --is_COT \
-#     --is_COD \
-#     --is_FEW_SHOT \
-#     --is_SELF_CONSIS
 
 

@@ -29,16 +29,6 @@ args = parse_args()
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-# project_root = "/home/snt/projects_lujun/agentCLS"
-# training_dataset_path = "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl"
-# model_path = "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct"
-# VLLM_API_URL = "http://0.0.0.0:8000/v1/chat/completions"
-# is_BASE = True
-# is_COT = True
-# is_COD = True
-# is_FEW_SHOT = True
-# is_SELF_CONSIS = True
-
 project_root = args.project_root
 sys.path.append(os.path.abspath(project_root))
 from utils.prompts import (
@@ -333,19 +323,3 @@ if is_SELF_CONSIS:
 
 print("[INFO] Prompt testing completed!")
 
-
-
-# python script/prompt_eval/prompt_testing_gpt.py \
-#     --project_root "/home/snt/projects_lujun/agentCLS" \
-#     --training_dataset_path "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl" \
-#     --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
-#     --vllm_url "http://0.0.0.0:8000/v1/chat/completions" \
-#     --is_BASE 
-
-
-# python script/prompt_eval/prompt_testing_gpt.py \
-#     --project_root "/home/snt/projects_lujun/agentCLS" \
-#     --training_dataset_path "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl" \
-#     --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
-#     --vllm_url "http://0.0.0.0:8000/v1/chat/completions" \
-#     --is_BASE 
