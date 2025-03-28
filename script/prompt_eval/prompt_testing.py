@@ -337,11 +337,15 @@ print("[INFO] Prompt testing completed!")
 
 # python script/prompt_eval/prompt_testing_gpt.py \
 #     --project_root "/home/snt/projects_lujun/agentCLS" \
-#     --training_dataset_path "assets/training_dataset/LDD_split_proportional_train_1500_val_300.jsonl" \
+#     --training_dataset_path "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl" \
 #     --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
 #     --vllm_url "http://0.0.0.0:8000/v1/chat/completions" \
-#     --is_BASE \
-#     --is_COT \
-#     --is_COD \
-#     --is_FEW_SHOT \
-#     --is_SELF_CONSIS
+#     --is_BASE 
+
+
+# python script/prompt_eval/prompt_testing_gpt.py \
+#     --project_root "/home/snt/projects_lujun/agentCLS" \
+#     --training_dataset_path "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl" \
+#     --model_path "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct" \
+#     --vllm_url "http://0.0.0.0:8000/v1/chat/completions" \
+#     --is_BASE 

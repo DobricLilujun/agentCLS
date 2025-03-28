@@ -1,0 +1,18 @@
+{"method": "Base prompt", "model": "Llama-3.2-1B-Instruct", "F1": 0.159, "GRH": 19.981}
+{"method": "Base prompt", "model": "Llama-3.2-3B-Instruct", "F1": 0.301, "GRH": 12.385}
+{"method": "Few-shot Prompt", "model": "Llama-3.2-1B-Instruct", "F1": 0.113, "GRH": 14.804}
+{"method": "Few-shot Prompt", "model": "Llama-3.2-3B-Instruct", "F1": 0.491, "GRH": 5.376}
+{"method": "Chain-of-Thought", "model": "Llama-3.2-1B-Instruct", "F1": 0.167, "GRH": 32.171}
+{"method": "Chain-of-Thought", "model": "Llama-3.2-3B-Instruct", "F1": 0.334, "GRH": 28.544}
+{"method": "Self-consistency COT", "model": "Llama-3.2-1B-Instruct", "F1": 0.168, "GRH": 109.086}
+{"method": "Self-consistency COT", "model": "Llama-3.2-3B-Instruct", "F1": 0.168, "GRH": 91.821}
+{"method": "Chain-of-Draft", "model": "Llama-3.2-1B-Instruct", "F1": 0.226, "GRH": 9.702}
+{"method": "Chain-of-Draft", "model": "Llama-3.2-3B-Instruct", "F1": 0.437, "GRH": 15.431}
+{"method": "Soft Prompt Tuning (SPT)", "model": "Llama-3.2-1B-Instruct", "F1": 0.429, "GRH": 124.827}
+{"method": "Soft Prompt Tuning (SPT)", "model": "Llama-3.2-3B-Instruct", "F1": 0.135, "GRH": 481.701}
+{"method": "Soft Prompt Tuning (SPT)", "model": "ModernBERT-base", "F1": 0.184, "GRH": 26.394}
+{"method": "Prefix Tuning (PT)", "model": "Llama-3.2-1B-Instruct", "F1": 0.107, "GRH": 212.826}
+{"method": "Prefix Tuning (PT)", "model": "Llama-3.2-3B-Instruct", "F1": 0.117, "GRH": 1040.624}
+{"method": "Fine-tuning (FT)", "model": "Llama-3.2-1B-Instruct", "F1": 0.89, "GRH": 40.631}
+{"method": "Fine-tuning (FT)", "model": "Llama-3.2-3B-Instruct", "F1": 0.903, "GRH": 226.869}
+{"method": "Fine-tuning (FT)", "model": "ModernBERT-base", "F1": 0.811, "GRH": 24.018}
