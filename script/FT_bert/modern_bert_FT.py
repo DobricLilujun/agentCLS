@@ -85,16 +85,6 @@ model_path = args.model_path
 resume_from_checkpoint = args.resume_from_checkpoint
 resume_checkpoint_path = args.resume_checkpoint_path
 
-# Data preparation
-# per_device_train_batch_size = 8
-# per_device_eval_batch_size = 8
-# num_train_epochs = 3
-# learning_rate = 5e-5
-# project_root = "/home/snt/projects_lujun/agentCLS"
-# training_dataset_path = "assets/training_dataset/LDD_split.json"
-# model_path = "answerdotai/ModernBERT-base"
-# resume_from_checkpoint = False
-# resume_checkpoint_path = None
 
 train_dataset_path = os.path.abspath(os.path.join(project_root, training_dataset_path))
 sys.path.append(project_root)
