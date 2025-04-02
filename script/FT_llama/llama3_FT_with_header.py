@@ -377,7 +377,18 @@ def evaluate():
         
 
 
+trainer_stats = None
 
+def main():
+    trainer_stats = train()
+    return trainer_stats
+
+if __name__ == "__main__":
+    trainer_stats = main()
+    # eval_results = evaluate()
+
+    print("Finished training and evaluation.")
+    
 # python llama3_FT_with_header.py \
 # --per_device_train_batch_size 8 \
 # --per_device_eval_batch_size 8 \
