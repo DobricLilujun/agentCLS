@@ -76,21 +76,6 @@ hidden_layers = args.hidden_layers
 # ========================== CMD Argument Parser ==========================
 
 
-# ## Data preparation
-# per_device_train_batch_size = 8
-# per_device_eval_batch_size = 8
-# num_train_epochs = 3
-# learning_rate = 1e-6
-# project_root = "/home/snt/projects_lujun/agentCLS"
-# training_dataset_path = "assets/training_dataset/EURLEX57K_split_proportional_train_1500_val_300.jsonl"
-# model_path = "/home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct"
-# resume_from_checkpoint = False
-# resume_checkpoint_path = None
-# qlora = False
-# r = 16
-# hidden_dim = 256
-# hidden_layers  = 2
-
 train_dataset_path = os.path.abspath(os.path.join(project_root, training_dataset_path))
 sys.path.append(project_root)
 
@@ -107,7 +92,7 @@ eval_steps = 100
 eval_strategy = "epoch"
 save_strategy = "epoch"
 save_total_limit = 2
-logging_strategy = "epoch"
+logging_strategy = "steps"
 max_grad_norm = 0.3
 input_dataset_name = train_dataset_path.split("/")[-1].split(".")[0]
 model_name = model_path.split("/")[-1]
@@ -272,7 +257,7 @@ def train():
         bf16=True,
         optim="adamw_torch_fused", 
         logging_strategy=logging_strategy,
-        # logging_steps=logging_steps,
+        logging_steps=logging_steps,
         eval_strategy=eval_strategy,
         eval_steps=eval_steps,
         save_strategy=save_strategy,
