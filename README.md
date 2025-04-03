@@ -20,18 +20,10 @@ In this study, we primarily investigate the effectiveness of **Supervised Fine-T
 - **Self-consistency CoT**
 - **Chain-of-Draft**
 
-as well as advanced tuning methods such as:
+as well as advanced fine-tuning methods such as:
 
 - **Soft Prompt Tuning (SPT)**
 - **Prefix Tuning (PT)**
-
-We employ various pretrained language models, notably the **Llama-3.2** series with differing parameter scales and the **ModernBERT-base** model, to conduct a systematic comparison. The analysis considers multiple aspects of model performance, including:
-
-- Classification accuracy
-- Inference efficiency
-
-The experimental findings reveal substantial variation in performance across different methods and model configurations. **Chain-of-Thought** and its self-consistent variant demonstrate advantages in reasoning-intensive scenarios, while **supervised fine-tuning** generally yields robust classification performance. Overall, this comprehensive evaluation highlights the strengths and trade-offs of each approach, offering practical insights for the deployment of scalable and effective long-text classification models in industrial settings.
-
 
 ## Code Explanation
 
