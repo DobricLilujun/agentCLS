@@ -1,6 +1,6 @@
 # agentCLS
 
-This project is for the conference paper "Small Language Models in the Real World: Insights from Industrial Text Classification".
+This project is intended for the conference paper reviewers, titled 'Small Language Models in Real-World Applications: Insights from Industrial Text Classification'.
 
 <div style="text-align: center;">
     <img src="photo.png" alt="Figure 1: Model Overview" width="50%">
