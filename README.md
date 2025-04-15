@@ -3,12 +3,13 @@
 This project is intended for the conference paper reviewers, titled 'Small Language Models in Real-World Applications: Insights from Industrial Text Classification'.
 
 <div style="text-align: center;">
-    <img src="photo.png" alt="Figure 1: Model Overview" width="50%">
+    <img src="photo.png" alt="Figure 1: Model Overview" width="30%">
 </div>
 
 ## Abstract
 
 With the emergence of ChatGPT, Transformer models have significantly advanced text classification and related tasks. Decoder-only models such as Llama exhibit strong performance and flexibility, yet they suffer from inefficiency on inference due to token-by-token generation, and their effectiveness in text classification tasks heavily depends on prompt quality. Moreover, their substantial GPU resource requirements often limit widespread adoption. Thus, the question of whether smaller language models are capable of effectively handling text classification tasks emerges as a topic of significant interest. However, the selection of appropriate models and methodologies remains largely underexplored. In this paper, we conduct a comprehensive evaluation of prompt engineering and supervised fine-tuning methods for Transformer-based text classification. Specifically, we focus on practical industrial scenarios, including email classification, legal document categorization, and the classification of extremely long academic texts. We examine the strengths and limitations of smaller models, with particular attention to both their performance and their efficiency in video random-access memory (VRAM) utilization, thereby providing valuable insights for the local deployment and application of compact models in industrial settings.
+
 
 ## Methods
 
@@ -24,6 +25,15 @@ as well as advanced fine-tuning methods such as:
 
 - **Soft Prompt Tuning (SPT)**
 - **Prefix Tuning (PT)**
+
+## Details About Training
+
+In this study, we primarily utilize the **AutoModelForSequenceClassification** method from the Transformers library to construct the SFT (Supervised Fine-Tuning) model architecture. This method maps model names to their corresponding classification structures, such as `gemma` to `GemmaForSequenceClassification`, `llama` to `LlamaForSequenceClassification`, and `modernbert` to `ModernBertForSequenceClassification`.
+
+Generally, the architecture extracts either the first or the last token's hidden state from the final hidden layer, and appends a classification head, typically implemented as a single-layer linear classifier. Additionally, we enable backpropagation through all model parameters, rendering the entire model trainable and allowing all weights to be updated during training.
+
+We set `train_seed = 3407`, `max_grad_norm = 0.3`, and `max_length = 4096`, and conduct experiments using different methods and models. Prefix Tuning relies on global attention to propagate prefix information, while ModernBERT introduces an alternating local-global attention mechanism, employing global attention every three layers and using a local sliding window attention for the remaining layers. As a result, Prefix Tuning is not well-suited for use with ModernBERT.
+
 
 ## Code Explanation
 
@@ -46,6 +56,26 @@ Within the `prompt_eval` directory:
 ### Utility Scripts
 
 The `utils/prompts.py` file includes all prompt designs along with their specific content.
+
+
+## Additional Results
+
+### Empirical Summary
+
+
+| Methods Types         | Methods                       | Training Required? | Data? | Implementation | Flexibility | Interpretability |
+|-----------------------|-------------------------------|--------------------|-------|----------------|-------------|------------------|
+| Prompt Engineering    | Base Prompts                  | No                 | ☆     | ☆              | ☆☆☆         | ☆☆               |
+| Prompt Engineering    | Few-Shot Prompts              | No                 | ☆☆    | ☆☆             | ☆☆☆☆        | ☆☆☆☆             |
+| Prompt Engineering    | Chain-of-Thought              | No                 | ☆     | ☆              | ☆☆☆☆        | ☆☆☆☆☆            |
+| Prompt Engineering    | Self-consistency COT          | No                 | ☆     | ☆              | ☆☆☆☆        | ☆☆☆☆☆            |
+| Prompt Engineering    | Chain-of-Draft                | No                 | ☆     | ☆              | ☆☆☆☆        | ☆☆☆☆             |
+| Fine Tuning           | Supervised Fine-tuning        | Yes                | ☆☆☆☆  | ☆☆☆            | ☆           | ☆                |
+| Soft Prompt Tuning    | Parameter Efficient Fine-tuning| Yes                | ☆☆☆☆☆ | ☆☆☆☆           | ☆           | ☆                |
+| Prefix Tuning         | Parameter Efficient Fine-tuning| Yes                | ☆☆☆☆☆ | ☆☆☆☆           | ☆           | ☆                |
+
+
+
 
 
 ## Examples Of datasets
@@ -166,7 +196,6 @@ The `utils/prompts.py` file includes all prompt designs along with their specifi
 > Veuillez trouver en annexe, la facture finale.  
 >
 > Cordialement  
-
 > Ce message et toutes les pièces jointes (ci-après le "message") sont établis à l’intention exclusive de ses destinataires et sont confidentiels.  
 > Si vous recevez ce message par erreur, merci de le détruire et d’en avertir immédiatement l’expéditeur.  
 > ...
