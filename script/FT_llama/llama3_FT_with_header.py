@@ -14,7 +14,7 @@ from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from transformers import EarlyStoppingCallback
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 import json
-
+import argparse
 from transformers import AutoModel, AutoConfig
 import torch
 from torch import nn
@@ -160,66 +160,78 @@ train_dataset.features.keys()
 
 
 
+from transformers import AutoModel, AutoConfig
+import torch
+from torch import nn
+import torch.nn.functional as F
+from safetensors.torch import load_file
+
 config = AutoConfig.from_pretrained(model_path, label2id=label2id, id2label=id2label)
 config.num_labels = num_labels
 model_body = AutoModel.from_pretrained(model_path, config=config)
 
 
-class CustomDifferentiableHead(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, hidden_layers=1):
-        super(CustomDifferentiableHead, self).__init__()
-        
+class CustomModel(nn.Module):
+    def __init__(self, model_body, input_dim, hidden_dim, output_dim, hidden_layers=1):
+        super(CustomModel, self).__init__()
+        self.model_body = model_body
+        self.loss_fn = self.get_loss_fn()
+
         layers = []
         in_dim = input_dim
         
         for _ in range(hidden_layers):
-            layers.append(nn.Linear(in_dim, hidden_dim))
+            layers.append(nn.Linear(in_dim, hidden_dim, bias=False))
             layers.append(nn.ReLU())
             in_dim = hidden_dim
         
-        layers.append(nn.Linear(hidden_dim, output_dim))
-        self.model = nn.Sequential(*layers)
-    
-    def forward(self, inputs):
-        token_embeddings = inputs['token_embeddings']  
-        cls_embedding = token_embeddings[:, 0, :]     
-        logits = self.model(cls_embedding)
-        return {"logits": logits}
-
-    def predict(self, embeddings):
-        logits = self.model(embeddings)
-        return torch.argmax(logits, dim=-1)               
-
-    def predict_proba(self, embeddings):
-        logits = self.model(embeddings)
-        probabilities = F.softmax(logits, dim=-1)      
-        return probabilities
+        layers.append(nn.Linear(hidden_dim, output_dim, bias=False))
+        self.score = nn.Sequential(*layers)
 
     def get_loss_fn(self):
         return nn.CrossEntropyLoss()
-
-
-class CustomModel(nn.Module):
-    def __init__(self, model_body, custom_head):
-        super(CustomModel, self).__init__()
-        self.model_body = model_body
-        self.custom_head = custom_head 
-        self.loss_fn = custom_head.get_loss_fn() 
-
+    
     def forward(self, input_ids, attention_mask=None, token_type_ids=None, labels=None):
         outputs = self.model_body(input_ids=input_ids,
                                   attention_mask=attention_mask,
                                   token_type_ids=token_type_ids)
         
-        cls_embedding = outputs.last_hidden_state[:, 0, :]
-        
-        logits = self.custom_head.predict_proba(cls_embedding)
-        
+        cls_embedding = outputs.last_hidden_state
+        logits = self.score(cls_embedding)
+
+        batch_size = cls_embedding.shape[0]
+        non_pad_mask = (input_ids != self.model_body.config.pad_token_id).to(logits.device, torch.int32)
+        token_indices = torch.arange(input_ids.shape[-1], device=logits.device, dtype=torch.int32)
+        last_non_pad_token = (token_indices * non_pad_mask).argmax(-1)
+        pooled_logits = logits[torch.arange(batch_size, device=logits.device), last_non_pad_token]
+
         loss = None
         if labels is not None:
-            loss = self.loss_fn(logits, labels)
+            loss = self.loss_fn(pooled_logits, labels)
         
-        return {"logits": logits, "loss": loss}
+        return {"logits": pooled_logits, "loss": loss}
+
+    def predict(self, input_ids, attention_mask=None, token_type_ids=None):
+        with torch.no_grad():
+            outputs = self.model_body(input_ids=input_ids,
+                                    attention_mask=attention_mask,
+                                    token_type_ids=token_type_ids)
+
+            cls_embedding = outputs.last_hidden_state
+            logits = self.score(cls_embedding)
+
+            batch_size = cls_embedding.shape[0]
+            non_pad_mask = (input_ids != self.model_body.config.pad_token_id).to(logits.device, torch.int32)
+            token_indices = torch.arange(input_ids.shape[-1], device=logits.device, dtype=torch.int32)
+            last_non_pad_token = (token_indices * non_pad_mask).argmax(-1)
+            pooled_logits = logits[torch.arange(batch_size, device=logits.device), last_non_pad_token]
+
+            return pooled_logits
+    
+    def predict_proba(self, embeddings):
+        logits = self.head(embeddings)
+        probabilities = F.softmax(logits, dim=-1)
+        return probabilities
     
 
 input_dim = config.hidden_size 
@@ -227,12 +239,10 @@ hidden_dim = hidden_dim
 output_dim = num_labels  
 
 
-custom_head = CustomDifferentiableHead(input_dim=input_dim,
+model = CustomModel(model_body=model_body, input_dim=input_dim,
                                        hidden_dim=hidden_dim,
                                        output_dim=output_dim, 
                                        hidden_layers=hidden_layers)
-
-model = CustomModel(model_body=model_body, custom_head=custom_head)
 
 model.model_body.config.pad_token_id = tokenizer.pad_token_id
 model.model_body.config.use_cache = False
@@ -289,91 +299,6 @@ def train():
     print("Finished training SFT.")
     return trainer_stats
 
-
-def evaluate():
-    
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    def get_last_checkpoints(output_dir):
-        checkpoints = os.listdir(output_dir)
-        checkpoints = [c for c in checkpoints if "checkpoint" in c]
-        checkpoints = [int(c.split("-")[-1]) for c in checkpoints]
-        last_checkpoint = max(checkpoints)
-        return f"{output_dir}/checkpoint-{last_checkpoint}"
-    
-    checkpoints_path  = get_last_checkpoints(output_dir)
-
-    custom_head = CustomDifferentiableHead(input_dim=input_dim, hidden_dim=hidden_dim, output_dim=output_dim, hidden_layers=2)
-    model = CustomModel(model_body=model_body, custom_head=custom_head)
-    state_dict = load_file(f"{checkpoints_path}/model.safetensors")
-    model.load_state_dict(state_dict)
-    model = model.to(device)
-    model.eval()
-    # model = AutoModelForSequenceClassification.from_pretrained(checkpoints_path).to(device)
-    
-    tokenizer = AutoTokenizer.from_pretrained(model_path) 
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    tokenizer.pad_token = tokenizer.eos_token
-    validation_results = []
-
-    # Initialize lists to store true and predicted labels
-    true_label_one_hot_list = []
-    true_labels = []
-    predicted_labels = []
-    all_probs = []
-
-    # Start time for measuring inference efficiency
-    start_time = time.time()
-
-    # Iterate through validation dataset and make predictions
-    for input in tqdm(val_dataset, desc="Processing validation data", unit="sample"):
-        sample = input['content']
-        true_label_idx = int(input['labels'])
-        tokenized_input = tokenizer(sample, padding="max_length", max_length=max_length, truncation=True, return_tensors="pt").to(device)
-        model_output = model(**tokenized_input)
-        logits = model_output["logits"]
-        probabilities = torch.nn.functional.softmax(logits, dim=-1)
-        predicted_class_idx = torch.argmax(probabilities, dim=-1).item()
-        predicted_label = id2label[str(predicted_class_idx)]
-        
-        true_label = id2label[str(true_label_idx)]
-        true_label_one_hot = np.zeros(probabilities.size(-1))
-        true_label_one_hot[true_label_idx] = 1
-
-        true_labels.append(true_label)
-        true_label_one_hot_list.append(true_label_one_hot)
-        predicted_labels.append(predicted_label)
-        all_probs.append(probabilities.detach().cpu().numpy())  # Store the raw probabilities for AUC
-        result = {
-            'content': sample,
-            'true_label': true_label,
-            'predicted_label': predicted_label,
-            'true_label_one_hot': true_label_one_hot.tolist(),
-            'predicted_class_idx': predicted_class_idx,
-            'probabilities': probabilities.detach().cpu().numpy().tolist()  # Convert to list for JSON serialization
-        }
-        validation_results.append(result)
-
-    timestamp = datetime.now().strftime("%m_%d_%H_%M_%S")
-    df_validation_results = pd.DataFrame(validation_results)
-    jsonl_file_path = os.path.join(checkpoints_path, f'validation_results_{timestamp}.jsonl')
-    df_validation_results.to_json(jsonl_file_path, orient='records', lines=True)
-
-
-    # Calculate accuracy, F1 score, and AUC
-    accuracy = accuracy_score(true_labels, predicted_labels)
-    f1 = f1_score(true_labels, predicted_labels, average='weighted')  # weighted F1 score
-    auc = roc_auc_score(np.array(true_label_one_hot_list),  np.squeeze(np.array(all_probs), axis=1), multi_class='ovr', average='weighted')  # for multi-class AUC
-
-    # Calculate inference time (average time per sample)
-    end_time = time.time()
-    inference_time = (end_time - start_time) / len(train_dataset)
-
-    # Print the results
-    print(f"Accuracy: {accuracy:.4f}")
-    print(f"F1 Score: {f1:.4f}")
-    print(f"AUC: {auc:.4f}")
-    print(f"Average Inference Time per Sample: {inference_time:.4f} seconds")
-    return 
         
 
 
@@ -385,21 +310,16 @@ def main():
 
 if __name__ == "__main__":
     trainer_stats = main()
-    # eval_results = evaluate()
-
     print("Finished training and evaluation.")
     
-# python llama3_FT_with_header.py \
-# --per_device_train_batch_size 8 \
-# --per_device_eval_batch_size 8 \
-# --num_train_epochs 10 \
-# --learning_rate 1e-6 \
-# --project_root /home/llama/Personal_Directories/srb/agentCLS \
-# --training_dataset_path assets/training_dataset/LDD_split_equal_train_1000_val_300.jsonl \
-# --model_path /home/llama/Personal_Directories/srb/binary_classfication/Llama-3.2-3B-Instruct \
-# --resume_from_checkpoint "False" \
-# --resume_checkpoint_path "" \
-# --qlora False \
-# --r 16
-# --hidden_dim 256 \
-# --hidden_layers 2
+# python script/FT_llama/llama3_FT_with_header.py \
+#     --per_device_train_batch_size 8 \
+#     --per_device_eval_batch_size 8 \
+#     --num_train_epochs 10 \
+#     --learning_rate 1e-6 \
+#     --project_root /home/snt/projects_lujun/agentCLS \
+#     --training_dataset_path assets/training_dataset/LDD_split_proportional_train_1500_val_300.jsonl \
+#     --model_path /home/snt/projects_lujun/base_models/Llama-3.2-1B-Instruct \
+#     --r 16
+#     --hidden_dim 256 \
+#     --hidden_layers 2
