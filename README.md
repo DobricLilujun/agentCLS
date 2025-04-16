@@ -75,7 +75,39 @@ The `utils/prompts.py` file includes all prompt designs along with their specifi
 | Prefix Tuning         | Parameter Efficient Fine-tuning| Yes                | ☆☆☆☆☆ | ☆☆☆☆           | ☆           | ☆                |
 
 
+### Model Performance On Multi-layer Header
 
+In the main experimental setting of the paper, we primarily follow the definition of the "header" as implemented in the `transformers` library, which refers to a single linear layer serving as the classification head. In the main text, we highlight our observation that the model’s intrinsic ability to understand domain-specific content also plays a crucial role in classification performance. 
+
+We further investigate whether adopting a multi-layer linear architecture as the header could positively influence classification performance. To this end, we manually modified the header structure, as shown in the file `script/FT_llama/llama3_FT_with_header.py`:
+
+```python
+layers = []
+in_dim = input_dim
+
+for _ in range(hidden_layers):
+    layers.append(nn.Linear(in_dim, hidden_dim, bias=False))
+    layers.append(nn.ReLU())
+    in_dim = hidden_dim
+
+
+layers.append(nn.Linear(hidden_dim, output_dim, bias=False))
+self.score = nn.Sequential(*layers)
+
+```
+
+That is, we use multiple linear layers interleaved with ReLU activation functions to introduce non-linearity. In our experiments, we set `hidden_dim = 256`, and varied the number of layers as 2, 3, 4, and 5. We used **Llama-3.2-1B-Instruct** as the base model for fine-tuning and testing. The resulting performance metrics are summarized in the table below:
+
+| Layers |  ACC |  F1 |
+|:------:|:-------:|:------:|
+|   1    |  0.89   |  0.89  |
+|   2    |  0.91   |  0.91  |
+|   3    |  0.92   |  0.92  |
+|   4    |  0.91   |  0.91  |
+|   5    |  0.91   |  0.91  |
+
+
+From the table, we observe that increasing the number of layers in the classification head does not lead to significant improvements in model performance. Instead, the performance remains stable across different configurations. Therefore, increasing the depth of the header has limited practical value in terms of performance enhancement.
 
 
 ## Examples Of datasets
